@@ -16,8 +16,9 @@ Vue 3 (TypeScript) + Tailwind app, running under Laravel Sail.
 Then <http://localhost:8090>. Sign in as `sarah@househub.test` / `password`
 (also `james@`, `mia@`, `noah@`).
 
-Ports are shifted off the defaults so they don't clash with the other services
-in `docker/`: app `8090`, Vite `5174`, MySQL `3307`, Redis `6380`.
+Ports are shifted off the defaults so they don't clash with the `~/docker`
+monorepo's services if both are running: app `8090`, Vite `5174`, MySQL `3307`,
+Redis `6380`.
 
 ## Checks
 
