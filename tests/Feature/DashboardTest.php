@@ -1,0 +1,89 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature;
+
+use App\Enums\ChoreStatus;
+use App\Models\Chore;
+use App\Models\Household;
+use App\Models\PlannedMeal;
+use App\Models\Recipe;
+use App\Models\ShoppingItem;
+use App\Models\ShoppingList;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
+
+class DashboardTest extends TestCase
+{
+    use RefreshDatabase;
+
+    #[Test]
+    public function guestsAreRedirectedToTheLoginPage(): void
+    {
+        $this->get('/dashboard')->assertRedirect('/login');
+    }
+
+    #[Test]
+    public function itRefusesUsersWhoAreNotInAHousehold(): void
+    {
+        $user = User::factory()->create(['household_id' => null]);
+
+        $this->actingAs($user)->get('/dashboard')->assertForbidden();
+    }
+
+    #[Test]
+    public function itShowsTonightsDinnerTodaysChoresAndTheDefaultShoppingList(): void
+    {
+        $household = Household::create(['name' => 'The Parkers', 'location' => 'Bristol', 'streak_days' => 12]);
+        $user = User::factory()->create(['household_id' => $household->id, 'name' => 'Sarah Parker']);
+
+        $recipe = Recipe::factory()->create(['household_id' => $household->id, 'name' => 'Lemon chicken traybake']);
+        PlannedMeal::factory()->create([
+            'household_id' => $household->id,
+            'recipe_id' => $recipe->id,
+            'cook_id' => $user->id,
+            'planned_on' => now()->toDateString(),
+        ]);
+
+        $list = ShoppingList::factory()->create(['household_id' => $household->id, 'name' => 'Tesco', 'slug' => 'tesco']);
+        ShoppingItem::factory()->count(3)->create(['shopping_list_id' => $list->id]);
+        ShoppingItem::factory()->done()->create(['shopping_list_id' => $list->id]);
+
+        Chore::factory()->count(2)->create(['household_id' => $household->id, 'status' => ChoreStatus::Today]);
+        Chore::factory()->create(['household_id' => $household->id, 'status' => ChoreStatus::Done]);
+        Chore::factory()->create(['household_id' => $household->id, 'status' => ChoreStatus::Recurring]);
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Dashboard')
+                ->where('dashboard.greeting', fn (string $greeting) => str_contains($greeting, 'Sarah'))
+                ->where('dashboard.streakDays', 12)
+                ->where('dashboard.tonight.name', 'Lemon chicken traybake')
+                ->where('dashboard.shoppingList.name', 'Tesco')
+                ->where('dashboard.shoppingList.remaining', 3)
+                // Recurring chores are not part of today's tally.
+                ->where('dashboard.choreProgress.total', 3)
+                ->where('dashboard.choreProgress.done', 1)
+                ->where('dashboard.choreProgress.percentage', 33)
+                ->where('dashboard.weather.location', 'Bristol')
+            );
+    }
+
+    #[Test]
+    public function itHidesTheWeatherPanelWhenNoForecastIsConfigured(): void
+    {
+        config(['household.weather' => null]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('dashboard.weather', null));
+    }
+}

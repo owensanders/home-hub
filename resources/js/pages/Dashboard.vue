@@ -1,0 +1,306 @@
+<script setup lang="ts">
+import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
+import { dial, tickStyle } from '@/lib/househub';
+import type { Dashboard } from '@/types/househub';
+import { Link, router, useForm } from '@inertiajs/vue3';
+
+const props = defineProps<{ dashboard: Dashboard }>();
+
+const draft = useForm({ name: '' });
+
+function addItem(): void {
+    const slug = props.dashboard.shoppingList?.slug;
+
+    if (!slug || draft.name.trim() === '') {
+        return;
+    }
+
+    draft.post(route('shopping.items.store', { slug }), {
+        preserveScroll: true,
+        onSuccess: () => draft.reset(),
+    });
+}
+
+function toggleItem(id: number): void {
+    router.patch(route('shopping.items.toggle', { item: id }), {}, { preserveScroll: true });
+}
+
+function toggleChore(id: number): void {
+    router.patch(route('chores.toggle', { chore: id }), {}, { preserveScroll: true });
+}
+</script>
+
+<template>
+    <HouseHubLayout title="Dashboard" :subtitle="dashboard.dateLine">
+        <div class="flex animate-hh-rise flex-col gap-4">
+            <!-- Hero -->
+            <section
+                class="relative flex flex-col items-stretch gap-5 overflow-hidden rounded-[22px] p-6 text-hh-onhero lg:flex-row"
+                style="background: linear-gradient(118deg, var(--hh-hero1) 0%, var(--hh-hero2) 100%)"
+            >
+                <div class="absolute -top-24 right-44 h-72 w-72 rounded-full bg-hh-coral opacity-[0.22] blur-3xl"></div>
+
+                <div class="relative min-w-0 flex-1">
+                    <div
+                        class="inline-flex h-[26px] items-center gap-2 rounded-lg border border-hh-heroline bg-hh-herofilm px-[11px] text-[11.5px] font-bold uppercase tracking-[0.06em]"
+                    >
+                        🔥 {{ dashboard.streakDays }} day streak
+                    </div>
+                    <div class="mt-3 text-4xl font-extrabold leading-[1.05] tracking-[-0.03em]">{{ dashboard.greeting }}</div>
+                    <div class="mt-2 text-sm text-hh-onhero2">{{ dashboard.dateLine }} · {{ dashboard.summaryLine }}</div>
+
+                    <div class="mt-5 flex flex-wrap gap-2.5">
+                        <div
+                            v-for="person in dashboard.family"
+                            :key="person.id"
+                            class="flex h-[42px] items-center gap-2.5 rounded-[13px] border border-hh-heroline bg-hh-herofilm py-0 pl-1 pr-3.5"
+                        >
+                            <div
+                                class="grid h-[34px] w-[34px] place-items-center rounded-[10px] text-xs font-extrabold text-[#0E1A2B]"
+                                :style="{ background: person.colour }"
+                            >
+                                {{ person.initials }}
+                            </div>
+                            <div class="flex flex-col leading-[1.15]">
+                                <span class="text-[13px] font-bold">{{ person.name.split(' ')[0] }}</span>
+                                <span class="text-[11px] text-hh-onhero2">{{ person.status }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    v-if="dashboard.weather"
+                    class="relative flex w-full flex-none flex-col justify-between gap-3 rounded-[18px] border border-hh-heroline bg-hh-herofilm p-[18px] lg:w-[180px]"
+                >
+                    <div class="text-[11px] font-bold uppercase tracking-[0.09em] text-hh-onhero2">
+                        {{ dashboard.weather.location }}
+                    </div>
+                    <div class="font-serif text-[46px] leading-none">{{ dashboard.weather.temperature }}</div>
+                    <div class="text-[13px] text-hh-onhero2">{{ dashboard.weather.summary }}</div>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">
+                <!-- Tonight's dinner -->
+                <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px] transition hover:-translate-y-0.5 hover:shadow-hh">
+                    <div class="mb-3.5 flex items-baseline gap-2.5">
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Tonight's dinner</h3>
+                        <span class="text-xs text-hh-ink3">Meal plan</span>
+                        <Link :href="route('meals.index')" class="ml-auto text-[13px] font-semibold text-hh-coral hover:opacity-75">
+                            Meal planner →
+                        </Link>
+                    </div>
+
+                    <div v-if="dashboard.tonight" class="flex flex-col gap-4 sm:flex-row">
+                        <div class="flex h-[172px] w-full flex-none flex-col justify-end rounded-[18px] bg-hh-coral p-4 sm:w-[172px]">
+                            <div class="text-[26px] font-extrabold leading-[1.08] tracking-[-0.025em] text-white">
+                                {{ dashboard.tonight.name }}
+                            </div>
+                        </div>
+                        <div class="flex min-w-0 flex-1 flex-col">
+                            <div class="flex flex-wrap gap-[7px]">
+                                <span
+                                    v-for="chip in [dashboard.tonight.duration, dashboard.tonight.difficulty].filter(Boolean)"
+                                    :key="chip as string"
+                                    class="rounded-[9px] bg-hh-soft px-2.5 py-[5px] text-xs font-semibold text-hh-ink2"
+                                >
+                                    {{ chip }}
+                                </span>
+                            </div>
+                            <p class="mt-3 text-sm leading-[1.55] text-hh-ink2">{{ dashboard.tonight.description }}</p>
+                            <div class="mt-auto flex items-center gap-3 pt-3.5">
+                                <div v-if="dashboard.tonight.cook" class="flex items-center gap-2">
+                                    <div
+                                        class="grid h-7 w-7 place-items-center rounded-[9px] text-[11px] font-extrabold text-[#0E1A2B]"
+                                        :style="{ background: dashboard.tonight.cook.colour }"
+                                    >
+                                        {{ dashboard.tonight.cook.initials }}
+                                    </div>
+                                    <span class="text-[13px] text-hh-ink2">
+                                        {{ dashboard.tonight.cook.name.split(' ')[0] }} is cooking
+                                    </span>
+                                </div>
+                                <Link
+                                    :href="route('meals.index')"
+                                    class="ml-auto flex h-[42px] items-center rounded-[13px] bg-hh-coral px-5 text-[13.5px] font-bold text-white transition hover:-translate-y-0.5"
+                                >
+                                    View recipe
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                    <p v-else class="py-10 text-center text-sm text-hh-ink3">Nothing planned for tonight yet.</p>
+                </section>
+
+                <!-- Shopping preview -->
+                <section
+                    v-if="dashboard.shoppingList"
+                    class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px] transition hover:-translate-y-0.5 hover:shadow-hh"
+                >
+                    <div class="mb-2.5 flex items-baseline gap-2.5">
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">{{ dashboard.shoppingList.name }} list</h3>
+                        <span class="text-xs text-hh-ink3">{{ dashboard.shoppingList.remaining }} left</span>
+                        <Link :href="route('shopping.index')" class="ml-auto text-[13px] font-semibold text-hh-coral hover:opacity-75">
+                            All lists →
+                        </Link>
+                    </div>
+
+                    <div class="flex flex-col gap-px">
+                        <button
+                            v-for="item in dashboard.shoppingList.items.slice(0, 5)"
+                            :key="item.id"
+                            type="button"
+                            class="flex min-h-[44px] w-full items-center gap-3 rounded-[11px] px-2 text-left transition-colors hover:bg-hh-soft"
+                            @click="toggleItem(item.id)"
+                        >
+                            <span
+                                class="grid h-[21px] w-[21px] flex-none place-items-center rounded-[7px] border-[1.5px] text-[11px] text-[#0E1A2B] transition"
+                                :style="tickStyle(item.done)"
+                            >
+                                {{ item.done ? '✓' : '' }}
+                            </span>
+                            <span class="flex-1 text-sm" :class="item.done ? 'text-hh-ink3 line-through' : 'text-hh-ink'">
+                                {{ item.name }}
+                            </span>
+                            <span class="font-mono text-[11.5px] text-hh-ink3">{{ item.quantity }}</span>
+                        </button>
+                    </div>
+
+                    <form class="mt-auto flex gap-2 pt-3" @submit.prevent="addItem">
+                        <input
+                            v-model="draft.name"
+                            placeholder="Add an item…"
+                            aria-label="Add an item"
+                            class="h-11 flex-1 rounded-[13px] border border-hh-line bg-hh-sunk px-3.5 text-sm text-hh-ink placeholder:text-hh-ink3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hh-coral"
+                        />
+                        <button
+                            type="submit"
+                            :disabled="draft.processing"
+                            class="h-11 w-11 rounded-[13px] bg-hh-coral text-xl text-white transition hover:scale-105 disabled:opacity-50"
+                        >
+                            +
+                        </button>
+                    </form>
+                </section>
+            </div>
+
+            <div class="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                <!-- Chores -->
+                <section class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                    <div class="mb-3.5 flex items-center gap-3">
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Today's chores</h3>
+                        <Link :href="route('chores.index')" class="ml-auto text-[13px] font-semibold text-hh-coral hover:opacity-75">
+                            Board →
+                        </Link>
+                    </div>
+
+                    <div class="mb-3.5 flex items-center gap-4">
+                        <div
+                            class="grid h-[74px] w-[74px] flex-none place-items-center rounded-full transition-[background] duration-500"
+                            :style="{ background: dial(dashboard.choreProgress.percentage) }"
+                        >
+                            <div class="flex h-[57px] w-[57px] items-center justify-center rounded-full bg-hh-card text-[16.5px] font-extrabold">
+                                {{ dashboard.choreProgress.percentage }}%
+                            </div>
+                        </div>
+                        <div class="text-[13px] leading-[1.55] text-hh-ink2">
+                            {{ dashboard.choreProgress.done }} of {{ dashboard.choreProgress.total }} done today.<br />
+                            Tap a chore to tick it off.
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <button
+                            v-for="chore in dashboard.chores.slice(0, 4)"
+                            :key="chore.id"
+                            type="button"
+                            class="flex min-h-[48px] w-full items-center gap-3 rounded-[14px] border border-hh-line px-3 text-left transition hover:translate-x-0.5"
+                            :class="chore.done ? 'bg-hh-sunk' : 'bg-hh-card'"
+                            @click="toggleChore(chore.id)"
+                        >
+                            <span
+                                class="grid h-[21px] w-[21px] flex-none place-items-center rounded-full border-[1.5px] text-[11px] text-[#0E1A2B]"
+                                :style="tickStyle(chore.done)"
+                            >
+                                {{ chore.done ? '✓' : '' }}
+                            </span>
+                            <span class="flex-1 text-sm font-medium" :class="chore.done ? 'text-hh-ink3 line-through' : 'text-hh-ink'">
+                                {{ chore.name }}
+                            </span>
+                            <span
+                                v-if="chore.assignee"
+                                class="grid h-[26px] w-[26px] flex-none place-items-center rounded-lg text-[10px] font-extrabold text-[#0E1A2B]"
+                                :style="{ background: chore.assignee.colour }"
+                            >
+                                {{ chore.assignee.initials }}
+                            </span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Agenda -->
+                <section class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                    <div class="mb-3.5 flex items-center gap-3">
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Coming up</h3>
+                        <span class="ml-auto text-xs text-hh-ink3">Next 3 days</span>
+                    </div>
+
+                    <div class="flex flex-col gap-3">
+                        <div v-for="group in dashboard.agenda" :key="group.label">
+                            <div class="mb-1.5 text-[11px] font-bold uppercase tracking-[0.09em] text-hh-ink3">{{ group.label }}</div>
+                            <div class="flex flex-col gap-[5px]">
+                                <div
+                                    v-for="entry in group.items"
+                                    :key="entry.id"
+                                    class="flex items-center gap-3 rounded-[13px] bg-hh-sunk px-3 py-2.5 transition hover:translate-x-[3px]"
+                                >
+                                    <span class="h-[30px] w-[3px] flex-none rounded-sm" :style="{ background: entry.colour }"></span>
+                                    <span class="w-[50px] flex-none font-mono text-[11.5px] text-hh-ink2">{{ entry.time }}</span>
+                                    <span class="flex-1 text-[13.5px] font-medium">{{ entry.title }}</span>
+                                    <span class="text-[11.5px] text-hh-ink3">{{ entry.who }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p v-if="dashboard.agenda.length === 0" class="text-sm text-hh-ink3">Nothing in the diary.</p>
+                    </div>
+                </section>
+
+                <!-- Budget -->
+                <section class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                    <div class="mb-1 flex items-center gap-3">
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">{{ dashboard.budget.monthLabel }} budget</h3>
+                        <span class="ml-auto text-xs text-hh-ink3">{{ dashboard.budget.daysLeft }} days left</span>
+                    </div>
+
+                    <div class="flex items-baseline gap-2.5">
+                        <span class="font-serif text-[40px] leading-[1.15]">{{ dashboard.budget.spent }}</span>
+                        <span class="text-[13px] text-hh-ink3">of {{ dashboard.budget.budgeted }}</span>
+                    </div>
+
+                    <div class="my-3 flex h-2.5 overflow-hidden rounded-md bg-hh-sunk">
+                        <span
+                            v-for="category in dashboard.budget.categories"
+                            :key="category.id"
+                            :style="{ width: `${category.shareOfTotal}%`, background: category.colour }"
+                        ></span>
+                    </div>
+
+                    <div class="flex flex-col gap-3">
+                        <div v-for="category in dashboard.budget.categories" :key="category.id" class="flex items-center gap-3">
+                            <span class="h-2 w-2 flex-none rounded-[3px]" :style="{ background: category.colour }"></span>
+                            <span class="w-24 flex-none text-[13px] font-medium">{{ category.label }}</span>
+                            <span class="h-1.5 flex-1 overflow-hidden rounded bg-hh-sunk">
+                                <span
+                                    class="block h-full rounded"
+                                    :style="{ width: `${category.percentageOfBudget}%`, background: category.colour }"
+                                ></span>
+                            </span>
+                            <span class="w-[52px] text-right font-mono text-[12.5px]">{{ category.spent }}</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </HouseHubLayout>
+</template>

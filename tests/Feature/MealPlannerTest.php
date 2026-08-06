@@ -1,0 +1,110 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature;
+
+use App\Models\PlannedMeal;
+use App\Models\Recipe;
+use App\Models\User;
+use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
+
+class MealPlannerTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Pin to a Wednesday so week boundaries are unambiguous.
+        CarbonImmutable::setTestNow('2026-08-05 09:00:00');
+    }
+
+    protected function tearDown(): void
+    {
+        CarbonImmutable::setTestNow();
+
+        parent::tearDown();
+    }
+
+    #[Test]
+    public function itRendersSevenDaysStartingOnMondayAndFilesMealsUnderTheirDay(): void
+    {
+        $user = User::factory()->create();
+        $recipe = Recipe::factory()->create(['household_id' => $user->household_id, 'name' => 'Veg lasagne']);
+
+        PlannedMeal::factory()->create([
+            'household_id' => $user->household_id,
+            'recipe_id' => $recipe->id,
+            'cook_id' => $user->id,
+            'planned_on' => '2026-08-07',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/meals')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('MealPlanner')
+                ->count('days', 7)
+                ->where('days.0.date', '2026-08-03')
+                ->where('days.0.dayLabel', 'Mon')
+                ->where('days.2.isToday', true)
+                ->count('days.4.meals', 1)
+                ->where('days.4.meals.0.name', 'Veg lasagne')
+                ->where('days.4.meals.0.missingLabel', 'All in')
+            );
+    }
+
+    #[Test]
+    public function itOnlyListsFavouritesInTheRecipeLibrary(): void
+    {
+        $user = User::factory()->create();
+        Recipe::factory()->create(['household_id' => $user->household_id, 'is_favourite' => true]);
+        Recipe::factory()->count(2)->create(['household_id' => $user->household_id, 'is_favourite' => false]);
+
+        $this->actingAs($user)
+            ->get('/meals')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->count('library', 1)->where('recipeCount', 3));
+    }
+
+    #[Test]
+    public function itReschedulesAMealToAnotherDay(): void
+    {
+        $user = User::factory()->create();
+        $recipe = Recipe::factory()->create(['household_id' => $user->household_id, 'name' => 'BBQ burgers']);
+        $meal = PlannedMeal::factory()->create([
+            'household_id' => $user->household_id,
+            'recipe_id' => $recipe->id,
+            'planned_on' => '2026-08-05',
+        ]);
+
+        $this->actingAs($user)
+            ->patch("/meals/{$meal->id}/reschedule", ['planned_on' => '2026-08-08'])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'BBQ burgers moved');
+
+        $this->assertSame('2026-08-08', $meal->refresh()->planned_on->toDateString());
+    }
+
+    #[Test]
+    public function itDoesNotRescheduleAnotherHouseholdsMeal(): void
+    {
+        $user = User::factory()->create();
+        $stranger = User::factory()->create();
+        $meal = PlannedMeal::factory()->create([
+            'household_id' => $stranger->household_id,
+            'planned_on' => '2026-08-05',
+        ]);
+
+        $this->actingAs($user)
+            ->patch("/meals/{$meal->id}/reschedule", ['planned_on' => '2026-08-08'])
+            ->assertNotFound();
+
+        $this->assertSame('2026-08-05', $meal->refresh()->planned_on->toDateString());
+    }
+}

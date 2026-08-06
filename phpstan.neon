@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+    paths:
+        - app
+        - database
+        - routes
+        - tests
+
+    # Lets Larastan type model attributes from the schema instead of falling
+    # back to `string`, so enum and date casts resolve correctly.
+    databaseMigrationsPath:
+        - database/migrations

@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body,
+html {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+@layer base {
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 0 0% 3.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 0 0% 3.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 0 0% 3.9%;
+        --primary: 0 0% 9%;
+        --primary-foreground: 0 0% 98%;
+        --secondary: 0 0% 92.1%;
+        --secondary-foreground: 0 0% 9%;
+        --muted: 0 0% 96.1%;
+        --muted-foreground: 0 0% 45.1%;
+        --accent: 0 0% 96.1%;
+        --accent-foreground: 0 0% 9%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 92.8%;
+        --input: 0 0% 89.8%;
+        --ring: 0 0% 3.9%;
+        --chart-1: 12 76% 61%;
+        --chart-2: 173 58% 39%;
+        --chart-3: 197 37% 24%;
+        --chart-4: 43 74% 66%;
+        --chart-5: 27 87% 67%;
+        --radius: 0.5rem;
+        --sidebar-background: 0 0% 98%;
+        --sidebar-foreground: 240 5.3% 26.1%;
+        --sidebar-primary: 0 0% 10%;
+        --sidebar-primary-foreground: 0 0% 98%;
+        --sidebar-accent: 0 0% 94%;
+        --sidebar-accent-foreground: 0 0% 30%;
+        --sidebar-border: 0 0% 91%;
+        --sidebar-ring: 217.2 91.2% 59.8%;
+    }
+
+    .dark {
+        --background: 0 0% 3.9%;
+        --foreground: 0 0% 98%;
+        --card: 0 0% 3.9%;
+        --card-foreground: 0 0% 98%;
+        --popover: 0 0% 3.9%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 0 0% 9%;
+        --secondary: 0 0% 14.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 0 0% 6.9%;
+        --muted-foreground: 0 0% 63.9%;
+        --accent: 0 0% 14.9%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 14.9%;
+        --input: 0 0% 14.9%;
+        --ring: 0 0% 83.1%;
+        --chart-1: 220 70% 50%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 30 80% 55%;
+        --chart-4: 280 65% 60%;
+        --chart-5: 340 75% 55%;
+        --sidebar-background: 0 0% 7%;
+        --sidebar-foreground: 0 0% 95.9%;
+        --sidebar-primary: 360, 100%, 100%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-accent: 0 0% 15.9%;
+        --sidebar-accent-foreground: 240 4.8% 95.9%;
+        --sidebar-border: 0 0% 15.9%;
+        --sidebar-ring: 217.2 91.2% 59.8%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+ * HouseHub design tokens (from HouseHub.dc.html). Namespaced with `hh-` so they
+ * sit alongside the starter kit's shadcn tokens rather than fighting them, and
+ * keyed off the same `.dark` class the appearance switcher already toggles.
+ * ------------------------------------------------------------------------- */
+@layer base {
+    :root {
+        --hh-bg: #eeeae3;
+        --hh-shell: #fcfaf7;
+        --hh-panel: #f4f1eb;
+        --hh-card: #ffffff;
+        --hh-soft: #f2eee7;
+        --hh-sunk: #ede8e0;
+
+        --hh-ink: #0e1a2b;
+        --hh-ink2: rgba(14, 26, 43, 0.56);
+        --hh-ink3: rgba(14, 26, 43, 0.4);
+        --hh-line: rgba(14, 26, 43, 0.09);
+
+        --hh-hero1: #101c2e;
+        --hh-hero2: #1b2f4a;
+        --hh-onhero: #fbfaf8;
+        --hh-onhero2: rgba(251, 250, 248, 0.66);
+        --hh-herofilm: rgba(255, 255, 255, 0.09);
+        --hh-heroline: rgba(255, 255, 255, 0.14);
+
+        --hh-coral: #ff4f40;
+        --hh-mint: #3ddc97;
+        --hh-lilac: #8b7cf6;
+        --hh-sun: #ffc94d;
+        --hh-sky: #6bc5f8;
+
+        --hh-t1: linear-gradient(150deg, #ffd9d4, #ffb3a8);
+        --hh-t2: linear-gradient(150deg, #d8f6e7, #a9e9cc);
+        --hh-t3: linear-gradient(150deg, #dde6ff, #bcc9fa);
+        --hh-t4: linear-gradient(150deg, #ffefc9, #ffdc97);
+        --hh-t5: linear-gradient(150deg, #e9e1ff, #cfc2fa);
+        --hh-ontint: #101c2e;
+
+        --hh-shadow: 0 18px 44px -26px rgba(14, 26, 43, 0.5);
+    }
+
+    .dark {
+        --hh-bg: #07090f;
+        --hh-shell: #0e1119;
+        --hh-panel: #0b0e15;
+        --hh-card: #151a25;
+        --hh-soft: #1a2130;
+        --hh-sunk: #11161f;
+
+        --hh-ink: #f2f5f9;
+        --hh-ink2: rgba(242, 245, 249, 0.62);
+        --hh-ink3: rgba(242, 245, 249, 0.42);
+        --hh-line: rgba(255, 255, 255, 0.09);
+
+        --hh-hero1: #1a1030;
+        --hh-hero2: #2a1840;
+        --hh-onhero: #f7f4ff;
+        --hh-onhero2: rgba(247, 244, 255, 0.66);
+        --hh-herofilm: rgba(255, 255, 255, 0.07);
+        --hh-heroline: rgba(255, 255, 255, 0.12);
+
+        --hh-t1: linear-gradient(150deg, #4a2a2c, #6b3a38);
+        --hh-t2: linear-gradient(150deg, #173a2e, #22553f);
+        --hh-t3: linear-gradient(150deg, #1e2a4e, #2c3c6b);
+        --hh-t4: linear-gradient(150deg, #463618, #63501f);
+        --hh-t5: linear-gradient(150deg, #2e2450, #42356e);
+        --hh-ontint: #f7f4ff;
+
+        --hh-shadow: 0 18px 44px -22px rgba(0, 0, 0, 0.8);
+    }
+}
+
+@keyframes hh-rise {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes hh-pop {
+    0% {
+        transform: scale(0.85);
+    }
+    55% {
+        transform: scale(1.12);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes hh-toast {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 16px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+    }
+}
+
+@keyframes hh-glow {
+    0%,
+    100% {
+        opacity: 0.55;
+    }
+    50% {
+        opacity: 1;
+    }
+}

@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\UseCases\Chores;
+
+use App\Contracts\Repositories\ChoreRepositoryInterface;
+use App\Contracts\Repositories\HouseholdRepositoryInterface;
+use App\Data\ChoreColumnData;
+use App\Data\ChoreData;
+use App\Data\MemberData;
+use App\Data\MemberScoreData;
+use App\Enums\ChoreStatus;
+use App\Models\Household;
+use App\Models\User;
+
+class GetChoreBoard
+{
+    public function __construct(
+        private readonly ChoreRepositoryInterface $chores,
+        private readonly HouseholdRepositoryInterface $households,
+    ) {}
+
+    /**
+     * @return array{columns: list<ChoreColumnData>, scores: list<MemberScoreData>}
+     */
+    public function execute(Household $household): array
+    {
+        $chores = $this->chores->allFor($household);
+
+        $columns = array_map(
+            fn (ChoreStatus $status) => new ChoreColumnData(
+                status: $status->value,
+                title: $status->label(),
+                count: $chores->where('status', $status)->count(),
+                items: $chores->where('status', $status)->map(ChoreData::fromModel(...))->values()->all(),
+            ),
+            ChoreStatus::cases(),
+        );
+
+        return [
+            'columns' => $columns,
+            'scores' => $this->households->members($household)
+                ->map(fn (User $member) => MemberScoreData::make(
+                    member: MemberData::fromModel($member),
+                    done: $chores->where('assigned_to', $member->id)->where('status', ChoreStatus::Done)->count(),
+                    total: $chores->where('assigned_to', $member->id)->count(),
+                ))
+                ->values()
+                ->all(),
+        ];
+    }
+}
