@@ -24,6 +24,7 @@ class HouseholdRepository implements HouseholdRepositoryInterface
     public function eventsBetween(Household $household, CarbonImmutable $from, CarbonImmutable $to): Collection
     {
         return $household->calendarEvents()
+            ->with('attendees')
             ->whereBetween('starts_at', [$from, $to])
             ->orderBy('starts_at')
             ->get();

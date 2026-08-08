@@ -22,8 +22,8 @@ class AgendaEntryData extends Data
         return new self(
             id: $event->id,
             title: $event->title,
-            time: $event->is_all_day ? 'All day' : $event->starts_at->format('H:i'),
-            who: $event->who_label,
+            time: $event->timeLabel(),
+            who: $event->whoLabel(),
             colour: $event->colour->cssVar(),
         );
     }
