@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/**
- * The four columns of the chore board.
- */
+/** The four columns of the chore board. */
 enum ChoreStatus: string
 {
     case Today = 'today';

@@ -6,9 +6,7 @@ namespace App\Data;
 
 use Spatie\LaravelData\Data;
 
-/**
- * A member's weekly chore tally, shown as the dial on the chores board.
- */
+/** A member's weekly chore tally, shown as the dial on the chores board. */
 class MemberScoreData extends Data
 {
     public function __construct(
