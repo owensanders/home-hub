@@ -72,17 +72,47 @@ class CalendarTest extends TestCase
     }
 
     #[Test]
-    public function itFallsBackToThisMonthWhenTheQueryStringIsNonsense(): void
+    public function itRejectsAMonthItCannotUnderstand(): void
     {
         $user = User::factory()->create();
-        $thisMonth = CarbonImmutable::now()->format('Y-m');
 
-        foreach (['2026-13', '2026-00', 'not-a-month', ''] as $month) {
+        foreach (['2026-13', '2026-00', 'not-a-month', '2026-08-01'] as $month) {
             $this->actingAs($user)
                 ->get("/calendar?month={$month}")
-                ->assertOk()
-                ->assertInertia(fn ($page) => $page->where('calendar.month', $thisMonth));
+                ->assertRedirect('/calendar')
+                ->assertSessionHasErrors('month');
         }
+    }
+
+    #[Test]
+    public function itResolvesTheMonthEvenWhenTodayIsThe31st(): void
+    {
+        // Without a `!` in the date format PHP fills the missing day from today,
+        // so on the 31st "2026-09" rolled over into October.
+        CarbonImmutable::setTestNow('2026-08-31');
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/calendar?month=2026-09')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('calendar.month', '2026-09')
+                ->where('calendar.monthLabel', 'September 2026')
+            );
+
+        CarbonImmutable::setTestNow();
+    }
+
+    #[Test]
+    public function anEmptyMonthFallsBackToThisOne(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/calendar?month=')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('calendar.month', CarbonImmutable::now()->format('Y-m')));
     }
 
     #[Test]

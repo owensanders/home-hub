@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\IndexMealPlannerRequest;
 use App\Http\Requests\RescheduleMealRequest;
 use App\Models\PlannedMeal;
 use App\Traits\ResolvesHouseholdTrait;
-use App\UseCases\Meals\GetMealPlanner;
-use App\UseCases\Meals\RescheduleMeal;
+use App\UseCases\Meals\GetMealPlannerUseCase;
+use App\UseCases\Meals\RescheduleMealUseCase;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,19 +19,20 @@ class MealPlannerController extends Controller
 {
     use ResolvesHouseholdTrait;
 
-    public function index(Request $request, GetMealPlanner $getMealPlanner): Response
+    public function index(IndexMealPlannerRequest $request, GetMealPlannerUseCase $getMealPlanner): Response
     {
-        $week = $request->date('week') !== null
-            ? CarbonImmutable::parse($request->date('week'))
-            : CarbonImmutable::now();
+        $week = $request->validated('week');
 
-        return Inertia::render('MealPlanner', $getMealPlanner->execute($this->household($request), $week));
+        return Inertia::render('MealPlanner', $getMealPlanner->execute(
+            $this->household($request),
+            $week !== null ? CarbonImmutable::createFromFormat('!Y-m-d', $week) : CarbonImmutable::now(),
+        ));
     }
 
     public function reschedule(
         RescheduleMealRequest $request,
         PlannedMeal $meal,
-        RescheduleMeal $rescheduleMeal,
+        RescheduleMealUseCase $rescheduleMeal,
     ): RedirectResponse {
         abort_if($meal->household_id !== $this->household($request)->id, 404);
 

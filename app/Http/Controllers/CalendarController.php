@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CalendarEventRequest;
+use App\Http\Requests\IndexCalendarRequest;
 use App\Models\CalendarEvent;
 use App\Traits\ResolvesHouseholdTrait;
-use App\UseCases\Calendar\AddCalendarEvent;
-use App\UseCases\Calendar\DeleteCalendarEvent;
-use App\UseCases\Calendar\GetCalendarMonth;
-use App\UseCases\Calendar\UpdateCalendarEvent;
+use App\UseCases\Calendar\AddCalendarEventUseCase;
+use App\UseCases\Calendar\DeleteCalendarEventUseCase;
+use App\UseCases\Calendar\GetCalendarMonthUseCase;
+use App\UseCases\Calendar\UpdateCalendarEventUseCase;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,14 +22,21 @@ class CalendarController extends Controller
 {
     use ResolvesHouseholdTrait;
 
-    public function index(Request $request, GetCalendarMonth $getCalendarMonth): Response
+    public function index(IndexCalendarRequest $request, GetCalendarMonthUseCase $getCalendarMonth): Response
     {
+        $month = $request->validated('month');
+
         return Inertia::render('Calendar', [
-            'calendar' => $getCalendarMonth->execute($this->household($request), $this->month($request)),
+            'calendar' => $getCalendarMonth->execute(
+                $this->household($request),
+                // `!` resets the unspecified day/time — without it PHP fills the day from
+                // today, so on the 31st "2026-09" would roll over into October.
+                $month !== null ? CarbonImmutable::createFromFormat('!Y-m', $month) : CarbonImmutable::now(),
+            ),
         ]);
     }
 
-    public function store(CalendarEventRequest $request, AddCalendarEvent $add): RedirectResponse
+    public function store(CalendarEventRequest $request, AddCalendarEventUseCase $add): RedirectResponse
     {
         $event = $add->execute(
             $this->household($request),
@@ -39,7 +47,7 @@ class CalendarController extends Controller
         return back()->with('toast', "“{$event->title}” added");
     }
 
-    public function update(CalendarEventRequest $request, CalendarEvent $event, UpdateCalendarEvent $update): RedirectResponse
+    public function update(CalendarEventRequest $request, CalendarEvent $event, UpdateCalendarEventUseCase $update): RedirectResponse
     {
         $this->assertOwned($request, $event);
 
@@ -48,7 +56,7 @@ class CalendarController extends Controller
         return back()->with('toast', "“{$updated->title}” updated");
     }
 
-    public function destroy(Request $request, CalendarEvent $event, DeleteCalendarEvent $delete): RedirectResponse
+    public function destroy(Request $request, CalendarEvent $event, DeleteCalendarEventUseCase $delete): RedirectResponse
     {
         $this->assertOwned($request, $event);
 
@@ -56,25 +64,6 @@ class CalendarController extends Controller
         $delete->execute($event);
 
         return back()->with('toast', "“{$title}” deleted");
-    }
-
-    /**
-     * The month being viewed, from `?month=YYYY-MM`. Anything unparseable — a
-     * hand-edited URL, a stale link — falls back to the current month.
-     */
-    private function month(Request $request): CarbonImmutable
-    {
-        $month = $request->query('month');
-
-        if (! is_string($month)) {
-            return CarbonImmutable::now();
-        }
-
-        $parsed = CarbonImmutable::canBeCreatedFromFormat($month, 'Y-m')
-            ? CarbonImmutable::createFromFormat('Y-m', $month)
-            : false;
-
-        return $parsed instanceof CarbonImmutable ? $parsed : CarbonImmutable::now();
     }
 
     private function assertOwned(Request $request, CalendarEvent $event): void
