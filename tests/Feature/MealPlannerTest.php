@@ -132,4 +132,122 @@ class MealPlannerTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page->component('MealPlanner')->where('days.0.date', '2026-08-03'));
     }
+
+    #[Test]
+    public function itAddsAMealFromAnExistingRecipe(): void
+    {
+        $user = User::factory()->create();
+        $recipe = Recipe::factory()->create(['household_id' => $user->household_id, 'name' => 'Veg lasagne']);
+
+        $this->actingAs($user)
+            ->post('/meals', [
+                'recipe_id' => $recipe->id,
+                'planned_on' => '2026-08-07',
+                'slot' => 'dinner',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Veg lasagne added');
+
+        $this->assertDatabaseHas('planned_meals', [
+            'household_id' => $user->household_id,
+            'recipe_id' => $recipe->id,
+            'planned_on' => '2026-08-07',
+        ]);
+    }
+
+    #[Test]
+    public function itAddsAMealWithANewRecipeCreatedOnTheFly(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/meals', [
+                'new_recipe_name' => 'Sunday roast',
+                'new_recipe_description' => 'Beef, all the trimmings',
+                'planned_on' => '2026-08-07',
+                'slot' => 'dinner',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Sunday roast added');
+
+        $this->assertDatabaseHas('recipes', [
+            'household_id' => $user->household_id,
+            'name' => 'Sunday roast',
+            'description' => 'Beef, all the trimmings',
+        ]);
+        $this->assertDatabaseHas('planned_meals', ['household_id' => $user->household_id, 'planned_on' => '2026-08-07']);
+    }
+
+    #[Test]
+    public function itUpdatesAMeal(): void
+    {
+        $user = User::factory()->create();
+        $recipe = Recipe::factory()->create(['household_id' => $user->household_id]);
+        $otherRecipe = Recipe::factory()->create(['household_id' => $user->household_id, 'name' => 'Fish tacos']);
+        $meal = PlannedMeal::factory()->create([
+            'household_id' => $user->household_id,
+            'recipe_id' => $recipe->id,
+            'planned_on' => '2026-08-05',
+            'slot' => 'dinner',
+        ]);
+
+        $this->actingAs($user)
+            ->patch("/meals/{$meal->id}", [
+                'recipe_id' => $otherRecipe->id,
+                'planned_on' => '2026-08-05',
+                'slot' => 'lunch',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Fish tacos updated');
+
+        $meal->refresh();
+        $this->assertSame($otherRecipe->id, $meal->recipe_id);
+        $this->assertSame('lunch', $meal->slot->value);
+    }
+
+    #[Test]
+    public function itDoesNotUpdateAnotherHouseholdsMeal(): void
+    {
+        $user = User::factory()->create();
+        $recipe = Recipe::factory()->create(['household_id' => $user->household_id]);
+        $stranger = User::factory()->create();
+        $meal = PlannedMeal::factory()->create(['household_id' => $stranger->household_id, 'planned_on' => '2026-08-05']);
+
+        $this->actingAs($user)
+            ->patch("/meals/{$meal->id}", [
+                'recipe_id' => $recipe->id,
+                'planned_on' => '2026-08-06',
+                'slot' => 'dinner',
+            ])
+            ->assertNotFound();
+    }
+
+    #[Test]
+    public function itDeletesAMeal(): void
+    {
+        $user = User::factory()->create();
+        $recipe = Recipe::factory()->create(['household_id' => $user->household_id, 'name' => 'BBQ burgers']);
+        $meal = PlannedMeal::factory()->create(['household_id' => $user->household_id, 'recipe_id' => $recipe->id]);
+
+        $this->actingAs($user)
+            ->delete("/meals/{$meal->id}")
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'BBQ burgers removed');
+
+        $this->assertDatabaseMissing('planned_meals', ['id' => $meal->id]);
+    }
+
+    #[Test]
+    public function itDoesNotDeleteAnotherHouseholdsMeal(): void
+    {
+        $user = User::factory()->create();
+        $stranger = User::factory()->create();
+        $meal = PlannedMeal::factory()->create(['household_id' => $stranger->household_id]);
+
+        $this->actingAs($user)
+            ->delete("/meals/{$meal->id}")
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('planned_meals', ['id' => $meal->id]);
+    }
 }

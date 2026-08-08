@@ -12,8 +12,11 @@ class PlannedMealData extends Data
     /** @param list<string> $tags */
     public function __construct(
         public int $id,
+        public int $recipeId,
         public string $name,
         public string $slot,
+        public string $slotKey,
+        public string $plannedOn,
         public ?string $duration,
         public ?string $difficulty,
         public ?string $description,
@@ -30,8 +33,11 @@ class PlannedMealData extends Data
 
         return new self(
             id: $meal->id,
+            recipeId: $meal->recipe_id,
             name: $meal->recipe->name,
             slot: $meal->slot->label(),
+            slotKey: $meal->slot->value,
+            plannedOn: $meal->planned_on->toDateString(),
             duration: $meal->recipe->duration_label,
             difficulty: $meal->recipe->difficulty,
             description: $meal->recipe->description,

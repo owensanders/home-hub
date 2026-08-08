@@ -69,8 +69,13 @@ export interface MemberScore {
 
 export interface PlannedMeal {
     id: number;
+    recipeId: number;
     name: string;
     slot: string;
+    /** Raw enum value ('breakfast' | 'lunch' | 'dinner'), for form <select>s. */
+    slotKey: string;
+    /** Y-m-d, for form inputs. */
+    plannedOn: string;
     duration: string | null;
     difficulty: string | null;
     description: string | null;
@@ -95,8 +100,11 @@ export interface Recipe {
     name: string;
     description: string | null;
     meta: string;
+    durationLabel: string | null;
+    difficulty: string | null;
     tint: number;
     tags: string[];
+    isFavourite: boolean;
 }
 
 export interface AgendaEntry {

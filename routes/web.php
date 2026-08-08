@@ -6,6 +6,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChoreController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MealPlannerController;
+use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ShoppingListController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -16,7 +17,15 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('meals', [MealPlannerController::class, 'index'])->name('meals.index');
+    Route::post('meals', [MealPlannerController::class, 'store'])->name('meals.store');
+    Route::patch('meals/{meal}', [MealPlannerController::class, 'update'])->name('meals.update');
+    Route::delete('meals/{meal}', [MealPlannerController::class, 'destroy'])->name('meals.destroy');
     Route::patch('meals/{meal}/reschedule', [MealPlannerController::class, 'reschedule'])->name('meals.reschedule');
+
+    Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
+    Route::post('recipes', [RecipeController::class, 'store'])->name('recipes.store');
+    Route::patch('recipes/{recipe}', [RecipeController::class, 'update'])->name('recipes.update');
+    Route::delete('recipes/{recipe}', [RecipeController::class, 'destroy'])->name('recipes.destroy');
 
     Route::get('shopping/{slug?}', [ShoppingListController::class, 'index'])->name('shopping.index');
     Route::post('shopping/{slug}/items', [ShoppingListController::class, 'store'])->name('shopping.items.store');

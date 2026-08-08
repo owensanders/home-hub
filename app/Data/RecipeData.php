@@ -15,8 +15,11 @@ class RecipeData extends Data
         public string $name,
         public ?string $description,
         public string $meta,
+        public ?string $durationLabel,
+        public ?string $difficulty,
         public int $tint,
         public array $tags,
+        public bool $isFavourite,
     ) {}
 
     public static function fromModel(Recipe $recipe): self
@@ -26,8 +29,11 @@ class RecipeData extends Data
             name: $recipe->name,
             description: $recipe->description,
             meta: implode(' · ', array_filter([$recipe->duration_label, $recipe->difficulty])),
+            durationLabel: $recipe->duration_label,
+            difficulty: $recipe->difficulty,
             tint: $recipe->tint,
             tags: $recipe->tags ?? [],
+            isFavourite: $recipe->is_favourite,
         );
     }
 }

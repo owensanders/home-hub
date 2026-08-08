@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\UseCases\Meals;
 
+use App\Contracts\Repositories\HouseholdRepositoryInterface;
 use App\Contracts\Repositories\MealPlanRepositoryInterface;
+use App\Data\MemberData;
 use App\Data\PlannedMealData;
 use App\Data\PlannerDayData;
 use App\Data\RecipeData;
@@ -16,9 +18,21 @@ class GetMealPlannerUseCase
 {
     private const LIBRARY_SIZE = 6;
 
-    public function __construct(private readonly MealPlanRepositoryInterface $meals) {}
+    public function __construct(
+        private readonly MealPlanRepositoryInterface $meals,
+        private readonly HouseholdRepositoryInterface $households,
+    ) {}
 
-    /** @return array{weekOf: string, days: list<PlannerDayData>, library: list<RecipeData>, recipeCount: int} */
+    /**
+     * @return array{
+     *     weekOf: string,
+     *     days: list<PlannerDayData>,
+     *     library: list<RecipeData>,
+     *     recipeCount: int,
+     *     recipes: list<RecipeData>,
+     *     members: list<MemberData>,
+     * }
+     */
     public function execute(Household $household, CarbonImmutable $anyDayInWeek): array
     {
         $start = $anyDayInWeek->startOfWeek();
@@ -51,6 +65,14 @@ class GetMealPlannerUseCase
                 ->values()
                 ->all(),
             'recipeCount' => $this->meals->countRecipes($household),
+            'recipes' => $this->meals->allRecipes($household)
+                ->map(RecipeData::fromModel(...))
+                ->values()
+                ->all(),
+            'members' => $this->households->members($household)
+                ->map(MemberData::fromModel(...))
+                ->values()
+                ->all(),
         ];
     }
 }
