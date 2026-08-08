@@ -20,9 +20,7 @@ class ShoppingListData extends Data
         public array $items,
     ) {}
 
-    /**
-     * @param  bool  $withItems  lists in the sidebar only need their counts.
-     */
+    /** @param  bool  $withItems  lists in the sidebar only need their counts. */
     public static function fromModel(ShoppingList $list, bool $withItems = true): self
     {
         $items = $list->items;

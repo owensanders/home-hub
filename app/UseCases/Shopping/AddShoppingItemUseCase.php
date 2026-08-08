@@ -9,7 +9,7 @@ use App\Data\ShoppingItemData;
 use App\Enums\ShoppingCategory;
 use App\Models\ShoppingList;
 
-class AddShoppingItem
+class AddShoppingItemUseCase
 {
     public function __construct(private readonly ShoppingRepositoryInterface $shopping) {}
 

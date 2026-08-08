@@ -107,4 +107,29 @@ class MealPlannerTest extends TestCase
 
         $this->assertSame('2026-08-05', $meal->refresh()->planned_on->toDateString());
     }
+
+    #[Test]
+    public function itRejectsAWeekItCannotUnderstand(): void
+    {
+        $user = User::factory()->create();
+
+        // `?week=garbage` used to reach Carbon and 500.
+        foreach (['garbage', '2026-13-01', '08/08/2026'] as $week) {
+            $this->actingAs($user)
+                ->get("/meals?week={$week}")
+                ->assertRedirect('/meals')
+                ->assertSessionHasErrors('week');
+        }
+    }
+
+    #[Test]
+    public function itRendersTheWeekAskedFor(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/meals?week=2026-08-05')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('MealPlanner')->where('days.0.date', '2026-08-03'));
+    }
 }

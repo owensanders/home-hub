@@ -12,15 +12,13 @@ use App\Models\Household;
 use App\Models\PlannedMeal;
 use Carbon\CarbonImmutable;
 
-class GetMealPlanner
+class GetMealPlannerUseCase
 {
     private const LIBRARY_SIZE = 6;
 
     public function __construct(private readonly MealPlanRepositoryInterface $meals) {}
 
-    /**
-     * @return array{weekOf: string, days: list<PlannerDayData>, library: list<RecipeData>, recipeCount: int}
-     */
+    /** @return array{weekOf: string, days: list<PlannerDayData>, library: list<RecipeData>, recipeCount: int} */
     public function execute(Household $household, CarbonImmutable $anyDayInWeek): array
     {
         $start = $anyDayInWeek->startOfWeek();

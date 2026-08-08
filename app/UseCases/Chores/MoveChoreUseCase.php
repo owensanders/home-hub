@@ -9,7 +9,7 @@ use App\Data\ChoreData;
 use App\Enums\ChoreStatus;
 use App\Models\Chore;
 
-class MoveChore
+class MoveChoreUseCase
 {
     public function __construct(private readonly ChoreRepositoryInterface $chores) {}
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Data;
 
 use App\Models\BudgetCategory;
+use App\Support\Money;
 use Spatie\LaravelData\Data;
 
 class BudgetCategoryData extends Data

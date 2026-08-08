@@ -7,7 +7,7 @@ namespace App\UseCases\Calendar;
 use App\Contracts\Repositories\CalendarEventRepositoryInterface;
 use App\Models\CalendarEvent;
 
-class DeleteCalendarEvent
+class DeleteCalendarEventUseCase
 {
     public function __construct(private readonly CalendarEventRepositoryInterface $events) {}
 

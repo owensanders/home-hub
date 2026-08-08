@@ -15,7 +15,7 @@ use App\Models\Household;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 
-class GetCalendarMonth
+class GetCalendarMonthUseCase
 {
     /** Six rows of seven, so the grid never changes height as you page through months. */
     private const CELLS = 42;

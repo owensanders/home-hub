@@ -16,7 +16,6 @@ use App\Data\ChoreData;
 use App\Data\ChoreProgressData;
 use App\Data\DashboardData;
 use App\Data\MemberData;
-use App\Data\Money;
 use App\Data\PlannedMealData;
 use App\Data\ShoppingListData;
 use App\Data\WeatherData;
@@ -26,11 +25,12 @@ use App\Models\BudgetCategory;
 use App\Models\CalendarEvent;
 use App\Models\Household;
 use App\Models\PlannedMeal;
+use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
-class GetDashboard
+class GetDashboardUseCase
 {
     /** How many days of the calendar the "Coming up" card shows. */
     private const AGENDA_DAYS = 3;
