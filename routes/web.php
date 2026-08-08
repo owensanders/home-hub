@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChoreController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MealPlannerController;
@@ -21,13 +22,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('shopping/{slug}/items', [ShoppingListController::class, 'store'])->name('shopping.items.store');
     Route::patch('shopping-items/{item}/toggle', [ShoppingListController::class, 'toggle'])->name('shopping.items.toggle');
 
+    Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+    Route::post('calendar/events', [CalendarController::class, 'store'])->name('calendar.events.store');
+    Route::patch('calendar/events/{event}', [CalendarController::class, 'update'])->name('calendar.events.update');
+    Route::delete('calendar/events/{event}', [CalendarController::class, 'destroy'])->name('calendar.events.destroy');
+
     Route::get('chores', [ChoreController::class, 'index'])->name('chores.index');
     Route::patch('chores/{chore}/toggle', [ChoreController::class, 'toggle'])->name('chores.toggle');
     Route::patch('chores/{chore}/move', [ChoreController::class, 'move'])->name('chores.move');
 
     // Screens the design leaves for a later pass. They render the "not designed
     // yet" empty state rather than 404ing, so the sidebar stays navigable.
-    foreach (['calendar', 'budget', 'house', 'documents', 'maintenance'] as $screen) {
+    foreach (['budget', 'house', 'documents', 'maintenance'] as $screen) {
         Route::get($screen, fn () => Inertia::render('Placeholder', ['screen' => $screen]))->name("{$screen}.index");
     }
 });

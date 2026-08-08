@@ -111,6 +111,48 @@ export interface AgendaGroup {
     items: AgendaEntry[];
 }
 
+export interface CalendarEvent {
+    id: number;
+    title: string;
+    date: string;
+    /** 'All day', '18:00', or '18:00–19:30'. */
+    time: string;
+    /** Attendee first names, or 'Everyone' for a whole-house event. */
+    who: string;
+    isAllDay: boolean;
+    location: string | null;
+    notes: string | null;
+    colour: string;
+    /** The `Palette` case name, for the colour picker. */
+    colourKey: string;
+    attendees: Member[];
+    /** `YYYY-MM-DDTHH:mm`, for prefilling the edit form. */
+    startsAt: string;
+    endsAt: string | null;
+}
+
+export interface CalendarDay {
+    date: string;
+    dayLabel: string;
+    dateLabel: string;
+    isToday: boolean;
+    isCurrentMonth: boolean;
+    events: CalendarEvent[];
+}
+
+export interface CalendarMonth {
+    /** `YYYY-MM`. */
+    month: string;
+    monthLabel: string;
+    previousMonth: string;
+    nextMonth: string;
+    today: string;
+    weekdayLabels: string[];
+    /** Always 42 — six rows of seven. */
+    days: CalendarDay[];
+    members: Member[];
+}
+
 export interface BudgetCategory {
     id: number;
     label: string;

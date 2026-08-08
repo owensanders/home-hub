@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Repositories;
+
+use App\Contracts\Repositories\CalendarEventRepositoryInterface;
+use App\Models\CalendarEvent;
+use App\Models\Household;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
+
+class CalendarEventRepository implements CalendarEventRepositoryInterface
+{
+    /** @return Collection<int, CalendarEvent> */
+    public function between(Household $household, CarbonImmutable $from, CarbonImmutable $to): Collection
+    {
+        return $household->calendarEvents()
+            ->with('attendees')
+            ->whereBetween('starts_at', [$from, $to])
+            ->orderBy('starts_at')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @param  list<int>  $attendeeIds
+     */
+    public function create(Household $household, array $attributes, array $attendeeIds): CalendarEvent
+    {
+        $event = $household->calendarEvents()->create($attributes);
+        $event->attendees()->sync($attendeeIds);
+
+        return $event->load('attendees');
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @param  list<int>  $attendeeIds
+     */
+    public function update(CalendarEvent $event, array $attributes, array $attendeeIds): CalendarEvent
+    {
+        $event->update($attributes);
+        $event->attendees()->sync($attendeeIds);
+
+        return $event->refresh()->load('attendees');
+    }
+
+    public function delete(CalendarEvent $event): void
+    {
+        $event->delete();
+    }
+}

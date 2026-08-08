@@ -34,7 +34,7 @@ class HouseHubSeeder extends Seeder
         $this->seedShopping($household);
         $this->seedChores($household, $members);
         $this->seedMeals($household, $members);
-        $this->seedCalendar($household);
+        $this->seedCalendar($household, $members);
         $this->seedBudget($household);
     }
 
@@ -214,30 +214,54 @@ class HouseHubSeeder extends Seeder
         }
     }
 
-    private function seedCalendar(Household $household): void
+    /**
+     * Spread across the whole of the current month so the month grid has something
+     * to show. `who` lists the members an event is for — empty means whole house.
+     *
+     * @param  array<string, User>  $members
+     */
+    private function seedCalendar(Household $household, array $members): void
     {
         $today = CarbonImmutable::today();
 
+        // [day of month, start, end, title, who, location, colour, all day]
         $events = [
-            [0, '09:30', 'Dentist — Noah', 'Noah', Palette::Sky, false],
-            [0, '16:00', 'Swim club pickup', 'Mia', Palette::Sun, false],
-            [0, '19:00', 'Council tax', '£186', Palette::Coral, false],
-            [1, '08:45', 'Boiler service', 'Home', Palette::Lilac, false],
-            [1, '13:00', 'Client call', 'Sarah', Palette::Mint, false],
-            [2, '07:00', 'Recycling collection', 'Home', Palette::Mint, false],
-            [2, '00:00', "Grandma's birthday", 'Family', Palette::Coral, true],
+            [2, '19:30', '22:00', 'Dinner at The Ivy', [], 'The Ivy, Clifton', Palette::Coral, false],
+            [3, '18:00', '19:30', 'Football practice', ['noah'], 'Beckett Park', Palette::Sky, false],
+            [4, '16:00', '17:00', 'Swim club', ['mia'], 'Horfield Leisure Centre', Palette::Sun, false],
+            [5, '13:00', '14:00', 'Client call', ['sarah'], null, Palette::Mint, false],
+            [6, '09:00', null, 'Recycling collection', [], null, Palette::Mint, false],
+            [8, '10:00', '11:00', 'Dentist', ['noah'], 'Whiteladies Dental', Palette::Sky, false],
+            [9, '00:00', null, "Grandma's birthday", [], null, Palette::Coral, true],
+            [10, '18:00', '19:30', 'Football practice', ['noah'], 'Beckett Park', Palette::Sky, false],
+            [11, '16:00', '17:00', 'Swim club', ['mia'], 'Horfield Leisure Centre', Palette::Sun, false],
+            [12, '08:45', '12:00', 'Boiler service', [], null, Palette::Lilac, false],
+            [13, '19:00', null, 'Council tax due', [], null, Palette::Coral, false],
+            [14, '11:00', '15:00', 'Parents evening', ['sarah', 'james'], 'Redland Green School', Palette::Lilac, false],
+            [16, '09:00', null, 'Recycling collection', [], null, Palette::Mint, false],
+            [17, '18:00', '19:30', 'Football practice', ['noah'], 'Beckett Park', Palette::Sky, false],
+            [18, '16:00', '17:00', 'Swim club', ['mia'], 'Horfield Leisure Centre', Palette::Sun, false],
+            [19, '09:30', '17:00', 'Sarah in London', ['sarah'], null, Palette::Mint, false],
+            [21, '00:00', null, 'Bank holiday', [], null, Palette::Coral, true],
+            [22, '14:00', '16:00', 'Mia at Lucy’s', ['mia'], null, Palette::Sun, false],
+            [24, '18:00', '19:30', 'Football practice', ['noah'], 'Beckett Park', Palette::Sky, false],
+            [26, '19:00', '23:00', 'James five-a-side', ['james'], 'Goals Bristol', Palette::Lilac, false],
+            [28, '12:30', '15:00', 'Family lunch', [], 'Nan’s', Palette::Coral, false],
         ];
 
-        foreach ($events as [$dayOffset, $time, $title, $who, $colour, $allDay]) {
-            [$hour, $minute] = array_map(intval(...), explode(':', $time));
+        foreach ($events as [$dayOfMonth, $start, $end, $title, $who, $location, $colour, $allDay]) {
+            $day = $today->startOfMonth()->addDays($dayOfMonth - 1);
 
-            $household->calendarEvents()->create([
+            $event = $household->calendarEvents()->create([
                 'title' => $title,
-                'starts_at' => $today->addDays($dayOffset)->setTime($hour, $minute),
+                'starts_at' => $day->setTimeFromTimeString($start),
+                'ends_at' => $end !== null ? $day->setTimeFromTimeString($end) : null,
                 'is_all_day' => $allDay,
-                'who_label' => $who,
+                'location' => $location,
                 'colour' => $colour,
             ]);
+
+            $event->attendees()->sync(array_map(fn (string $key) => $members[$key]->id, $who));
         }
     }
 

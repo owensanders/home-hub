@@ -1,29 +1,10 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
+import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { TransitionRoot } from '@headlessui/vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
-
-import HeadingSmall from '@/components/HeadingSmall.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { type BreadcrumbItem } from '@/types';
-
-interface Props {
-    className?: string;
-}
-
-defineProps<Props>();
-
-const breadcrumbItems: BreadcrumbItem[] = [
-    {
-        title: 'Password settings',
-        href: '/settings/password',
-    },
-];
 
 const passwordInput = ref<HTMLInputElement>();
 const currentPasswordInput = ref<HTMLInputElement>();
@@ -37,20 +18,18 @@ const form = useForm({
 const updatePassword = () => {
     form.put(route('password.update'), {
         preserveScroll: true,
-        onSuccess: () => form.reset(),
-        onError: (errors: any) => {
+        onSuccess: () => {
+            form.reset();
+        },
+        onError: (errors: Record<string, string>) => {
             if (errors.password) {
                 form.reset('password', 'password_confirmation');
-                if (passwordInput.value instanceof HTMLInputElement) {
-                    passwordInput.value.focus();
-                }
+                passwordInput.value?.focus();
             }
 
             if (errors.current_password) {
                 form.reset('current_password');
-                if (currentPasswordInput.value instanceof HTMLInputElement) {
-                    currentPasswordInput.value.focus();
-                }
+                currentPasswordInput.value?.focus();
             }
         },
     });
@@ -58,57 +37,59 @@ const updatePassword = () => {
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Profile settings" />
-
+    <HouseHubLayout title="Settings" subtitle="Manage your profile and account">
         <SettingsLayout>
-            <div class="space-y-6">
-                <HeadingSmall title="Update password" description="Ensure your account is using a long, random password to stay secure" />
+            <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Update password</h3>
+                <p class="mt-1 text-[13px] text-hh-ink3">Use a long, random password to keep the account secure.</p>
 
-                <form @submit.prevent="updatePassword" class="space-y-6">
-                    <div class="grid gap-2">
-                        <Label for="current_password">Current Password</Label>
-                        <Input
+                <form class="mt-5 flex flex-col gap-4" @submit.prevent="updatePassword">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="current_password" class="hh-label">Current password</label>
+                        <input
                             id="current_password"
                             ref="currentPasswordInput"
                             v-model="form.current_password"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="hh-input"
+                            required
                             autocomplete="current-password"
-                            placeholder="Current password"
+                            placeholder="••••••••"
                         />
                         <InputError :message="form.errors.current_password" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="password">New password</Label>
-                        <Input
+                    <div class="flex flex-col gap-1.5">
+                        <label for="password" class="hh-label">New password</label>
+                        <input
                             id="password"
                             ref="passwordInput"
                             v-model="form.password"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="hh-input"
+                            required
                             autocomplete="new-password"
-                            placeholder="New password"
+                            placeholder="••••••••"
                         />
                         <InputError :message="form.errors.password" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="password_confirmation">Confirm password</Label>
-                        <Input
+                    <div class="flex flex-col gap-1.5">
+                        <label for="password_confirmation" class="hh-label">Confirm password</label>
+                        <input
                             id="password_confirmation"
                             v-model="form.password_confirmation"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="hh-input"
+                            required
                             autocomplete="new-password"
-                            placeholder="Confirm password"
+                            placeholder="••••••••"
                         />
                         <InputError :message="form.errors.password_confirmation" />
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <Button :disabled="form.processing">Save password</Button>
+                        <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="form.processing">Save password</button>
 
                         <TransitionRoot
                             :show="form.recentlySuccessful"
@@ -117,11 +98,11 @@ const updatePassword = () => {
                             leave="transition ease-in-out"
                             leave-to="opacity-0"
                         >
-                            <p class="text-sm text-neutral-600">Saved</p>
+                            <p class="text-[13px] font-semibold text-hh-mint">Saved.</p>
                         </TransitionRoot>
                     </div>
                 </form>
-            </div>
+            </section>
         </SettingsLayout>
-    </AppLayout>
+    </HouseHubLayout>
 </template>

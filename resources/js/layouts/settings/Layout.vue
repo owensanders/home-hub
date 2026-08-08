@@ -1,56 +1,29 @@
 <script setup lang="ts">
-import Heading from '@/components/Heading.vue';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: '/settings/profile',
-    },
-    {
-        title: 'Password',
-        href: '/settings/password',
-    },
-    {
-        title: 'Appearance',
-        href: '/settings/appearance',
-    },
+const tabs = [
+    { label: 'Profile', route: 'profile.edit' },
+    { label: 'Password', route: 'password.edit' },
+    { label: 'Appearance', route: 'appearance' },
 ];
-
-const currentPath = window.location.pathname;
 </script>
 
 <template>
-    <div class="px-4 py-6">
-        <Heading title="Settings" description="Manage your profile and account settings" />
+    <div class="animate-hh-rise flex flex-col gap-5">
+        <nav class="flex flex-wrap gap-1.5 rounded-[15px] border border-hh-line bg-hh-panel p-1.5">
+            <Link
+                v-for="tab in tabs"
+                :key="tab.route"
+                :href="route(tab.route)"
+                class="rounded-[11px] px-4 py-2 text-[13px] transition-colors"
+                :class="route().current(tab.route) ? 'bg-hh-card font-bold text-hh-ink shadow-hh' : 'font-medium text-hh-ink2 hover:bg-hh-soft'"
+            >
+                {{ tab.label }}
+            </Link>
+        </nav>
 
-        <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-x-12 lg:space-y-0">
-            <aside class="w-full max-w-xl lg:w-48">
-                <nav class="flex flex-col space-x-0 space-y-1">
-                    <Button
-                        v-for="item in sidebarNavItems"
-                        :key="item.href"
-                        variant="ghost"
-                        :class="['w-full justify-start', { 'bg-muted': currentPath === item.href }]"
-                        as-child
-                    >
-                        <Link :href="item.href">
-                            {{ item.title }}
-                        </Link>
-                    </Button>
-                </nav>
-            </aside>
-
-            <Separator class="my-6 md:hidden" />
-
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
-                    <slot />
-                </section>
-            </div>
+        <div class="flex max-w-2xl flex-col gap-5">
+            <slot />
         </div>
     </div>
 </template>

@@ -1,31 +1,19 @@
 <script setup lang="ts">
 import { TransitionRoot } from '@headlessui/vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
 
 import DeleteUser from '@/components/DeleteUser.vue';
-import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import AppLayout from '@/layouts/AppLayout.vue';
+import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { type BreadcrumbItem, type SharedData, type User } from '@/types';
+import { type SharedData, type User } from '@/types';
 
 interface Props {
     mustVerifyEmail: boolean;
     status?: string;
-    className?: string;
 }
 
 defineProps<Props>();
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Profile settings',
-        href: '/settings/profile',
-    },
-];
 
 const page = usePage<SharedData>();
 const user = page.props.auth.user as User;
@@ -43,54 +31,51 @@ const submit = () => {
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <Head title="Profile settings" />
-
+    <HouseHubLayout title="Settings" subtitle="Manage your profile and account">
         <SettingsLayout>
-            <div class="flex flex-col space-y-6">
-                <HeadingSmall title="Profile information" description="Update your name and email address" />
+            <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Profile information</h3>
+                <p class="mt-1 text-[13px] text-hh-ink3">Update your name and email address.</p>
 
-                <form @submit.prevent="submit" class="space-y-6">
-                    <div class="grid gap-2">
-                        <Label for="name">Name</Label>
-                        <Input id="name" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" placeholder="Full name" />
-                        <InputError class="mt-2" :message="form.errors.name" />
+                <form class="mt-5 flex flex-col gap-4" @submit.prevent="submit">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="name" class="hh-label">Name</label>
+                        <input id="name" v-model="form.name" type="text" class="hh-input" required autocomplete="name" placeholder="Full name" />
+                        <InputError :message="form.errors.name" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="email">Email address</Label>
-                        <Input
+                    <div class="flex flex-col gap-1.5">
+                        <label for="email" class="hh-label">Email address</label>
+                        <input
                             id="email"
-                            type="email"
-                            class="mt-1 block w-full"
                             v-model="form.email"
+                            type="email"
+                            class="hh-input"
                             required
                             autocomplete="username"
-                            placeholder="Email address"
+                            placeholder="you@example.com"
                         />
-                        <InputError class="mt-2" :message="form.errors.email" />
+                        <InputError :message="form.errors.email" />
                     </div>
 
-                    <div v-if="mustVerifyEmail && !user.email_verified_at">
-                        <p class="mt-2 text-sm text-neutral-800">
-                            Your email address is unverified.
-                            <Link
-                                :href="route('verification.send')"
-                                method="post"
-                                as="button"
-                                class="focus:outline-hidden rounded-md text-sm text-neutral-600 underline hover:text-neutral-900 focus:ring-2 focus:ring-offset-2"
-                            >
-                                Click here to re-send the verification email.
-                            </Link>
-                        </p>
+                    <div v-if="mustVerifyEmail && !user.email_verified_at" class="rounded-[13px] bg-hh-sunk p-3.5 text-[13px] text-hh-ink2">
+                        Your email address is unverified.
+                        <Link
+                            :href="route('verification.send')"
+                            method="post"
+                            as="button"
+                            class="font-semibold text-hh-coral hover:opacity-75"
+                        >
+                            Re-send the verification email.
+                        </Link>
 
-                        <div v-if="status === 'verification-link-sent'" class="mt-2 text-sm font-medium text-green-600">
+                        <p v-if="status === 'verification-link-sent'" class="mt-2 font-semibold text-hh-mint">
                             A new verification link has been sent to your email address.
-                        </div>
+                        </p>
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <Button :disabled="form.processing">Save</Button>
+                        <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="form.processing">Save</button>
 
                         <TransitionRoot
                             :show="form.recentlySuccessful"
@@ -99,13 +84,13 @@ const submit = () => {
                             leave="transition ease-in-out"
                             leave-to="opacity-0"
                         >
-                            <p class="text-sm text-neutral-600">Saved.</p>
+                            <p class="text-[13px] font-semibold text-hh-mint">Saved.</p>
                         </TransitionRoot>
                     </div>
                 </form>
-            </div>
+            </section>
 
             <DeleteUser />
         </SettingsLayout>
-    </AppLayout>
+    </HouseHubLayout>
 </template>
