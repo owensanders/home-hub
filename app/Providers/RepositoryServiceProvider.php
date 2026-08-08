@@ -9,11 +9,13 @@ use App\Contracts\Repositories\ChoreRepositoryInterface;
 use App\Contracts\Repositories\HouseholdRepositoryInterface;
 use App\Contracts\Repositories\MealPlanRepositoryInterface;
 use App\Contracts\Repositories\ShoppingRepositoryInterface;
+use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Repositories\CalendarEventRepository;
 use App\Repositories\ChoreRepository;
 use App\Repositories\HouseholdRepository;
 use App\Repositories\MealPlanRepository;
 use App\Repositories\ShoppingRepository;
+use App\Repositories\UserRepository;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -25,5 +27,6 @@ class RepositoryServiceProvider extends ServiceProvider
         HouseholdRepositoryInterface::class => HouseholdRepository::class,
         MealPlanRepositoryInterface::class => MealPlanRepository::class,
         ShoppingRepositoryInterface::class => ShoppingRepository::class,
+        UserRepositoryInterface::class => UserRepository::class,
     ];
 }
