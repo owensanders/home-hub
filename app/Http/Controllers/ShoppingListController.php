@@ -8,9 +8,9 @@ use App\Contracts\Repositories\ShoppingRepositoryInterface;
 use App\Http\Requests\StoreShoppingItemRequest;
 use App\Models\ShoppingItem;
 use App\Traits\ResolvesHouseholdTrait;
-use App\UseCases\Shopping\AddShoppingItem;
-use App\UseCases\Shopping\GetShoppingScreen;
-use App\UseCases\Shopping\ToggleShoppingItem;
+use App\UseCases\Shopping\AddShoppingItemUseCase;
+use App\UseCases\Shopping\GetShoppingScreenUseCase;
+use App\UseCases\Shopping\ToggleShoppingItemUseCase;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,7 +22,7 @@ class ShoppingListController extends Controller
 
     public function __construct(private readonly ShoppingRepositoryInterface $shopping) {}
 
-    public function index(Request $request, GetShoppingScreen $getShoppingScreen, ?string $slug = null): Response
+    public function index(Request $request, GetShoppingScreenUseCase $getShoppingScreen, ?string $slug = null): Response
     {
         $household = $this->household($request);
 
@@ -35,7 +35,7 @@ class ShoppingListController extends Controller
         return Inertia::render('ShoppingLists', $getShoppingScreen->execute($household, $active));
     }
 
-    public function store(StoreShoppingItemRequest $request, string $slug, AddShoppingItem $addItem): RedirectResponse
+    public function store(StoreShoppingItemRequest $request, string $slug, AddShoppingItemUseCase $addItem): RedirectResponse
     {
         $list = $this->shopping->findListBySlug($this->household($request), $slug);
 
@@ -46,7 +46,7 @@ class ShoppingListController extends Controller
         return back()->with('toast', "“{$item->name}” added to {$list->name}");
     }
 
-    public function toggle(Request $request, ShoppingItem $item, ToggleShoppingItem $toggle): RedirectResponse
+    public function toggle(Request $request, ShoppingItem $item, ToggleShoppingItemUseCase $toggle): RedirectResponse
     {
         abort_if($item->list->household_id !== $this->household($request)->id, 404);
 

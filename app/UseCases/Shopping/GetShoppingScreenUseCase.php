@@ -12,13 +12,11 @@ use App\Enums\ShoppingCategory;
 use App\Models\Household;
 use App\Models\ShoppingList;
 
-class GetShoppingScreen
+class GetShoppingScreenUseCase
 {
     public function __construct(private readonly ShoppingRepositoryInterface $shopping) {}
 
-    /**
-     * @return array{lists: list<ShoppingListData>, active: ?ShoppingListData, groups: list<ShoppingGroupData>}
-     */
+    /** @return array{lists: list<ShoppingListData>, active: ?ShoppingListData, groups: list<ShoppingGroupData>} */
     public function execute(Household $household, ?ShoppingList $active): array
     {
         $lists = $this->shopping->listsFor($household);

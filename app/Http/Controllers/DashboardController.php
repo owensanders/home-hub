@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Traits\ResolvesHouseholdTrait;
-use App\UseCases\Dashboard\GetDashboard;
+use App\UseCases\Dashboard\GetDashboardUseCase;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,7 +15,7 @@ class DashboardController extends Controller
 {
     use ResolvesHouseholdTrait;
 
-    public function __invoke(Request $request, GetDashboard $getDashboard): Response
+    public function __invoke(Request $request, GetDashboardUseCase $getDashboard): Response
     {
         return Inertia::render('Dashboard', [
             'dashboard' => $getDashboard->execute(

@@ -9,10 +9,8 @@ use App\Data\ChoreData;
 use App\Enums\ChoreStatus;
 use App\Models\Chore;
 
-/**
- * Ticking a chore off moves it to Completed; un-ticking sends it back to Today.
- */
-class ToggleChore
+/** Ticking a chore off moves it to Completed; un-ticking sends it back to Today. */
+class ToggleChoreUseCase
 {
     public function __construct(private readonly ChoreRepositoryInterface $chores) {}
 

@@ -14,16 +14,14 @@ use App\Enums\ChoreStatus;
 use App\Models\Household;
 use App\Models\User;
 
-class GetChoreBoard
+class GetChoreBoardUseCase
 {
     public function __construct(
         private readonly ChoreRepositoryInterface $chores,
         private readonly HouseholdRepositoryInterface $households,
     ) {}
 
-    /**
-     * @return array{columns: list<ChoreColumnData>, scores: list<MemberScoreData>}
-     */
+    /** @return array{columns: list<ChoreColumnData>, scores: list<MemberScoreData>} */
     public function execute(Household $household): array
     {
         $chores = $this->chores->allFor($household);

@@ -6,9 +6,9 @@ namespace App\UseCases\Calendar;
 
 use App\Contracts\Repositories\CalendarEventRepositoryInterface;
 use App\Data\CalendarEventData;
-use App\Models\CalendarEvent;
+use App\Models\Household;
 
-class UpdateCalendarEvent
+class AddCalendarEventUseCase
 {
     public function __construct(private readonly CalendarEventRepositoryInterface $events) {}
 
@@ -16,10 +16,10 @@ class UpdateCalendarEvent
      * @param  array<string, mixed>  $attributes
      * @param  list<int>  $attendeeIds
      */
-    public function execute(CalendarEvent $event, array $attributes, array $attendeeIds): CalendarEventData
+    public function execute(Household $household, array $attributes, array $attendeeIds): CalendarEventData
     {
         return CalendarEventData::fromModel(
-            $this->events->update($event, $attributes, $attendeeIds)
+            $this->events->create($household, $attributes, $attendeeIds)
         );
     }
 }

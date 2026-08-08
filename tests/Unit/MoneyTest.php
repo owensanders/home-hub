@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Data\Money;
+use App\Support\Money;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

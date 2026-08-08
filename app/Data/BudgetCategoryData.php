@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Data;
 
 use App\Models\BudgetCategory;
+use App\Support\Money;
 use Spatie\LaravelData\Data;
 
 class BudgetCategoryData extends Data
@@ -20,7 +21,7 @@ class BudgetCategoryData extends Data
 
     /**
      * @param  int  $totalBudgetPence  used for the stacked bar at the top of the card,
-     *                                 where each segment is sized against the whole budget.
+     * where each segment is sized against the whole budget.
      */
     public static function fromModel(BudgetCategory $category, int $totalBudgetPence): self
     {

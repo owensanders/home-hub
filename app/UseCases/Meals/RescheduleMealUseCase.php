@@ -9,10 +9,8 @@ use App\Data\PlannedMealData;
 use App\Models\PlannedMeal;
 use Carbon\CarbonImmutable;
 
-/**
- * Dropping a meal card onto another day in the planner.
- */
-class RescheduleMeal
+/** Dropping a meal card onto another day in the planner. */
+class RescheduleMealUseCase
 {
     public function __construct(private readonly MealPlanRepositoryInterface $meals) {}
 

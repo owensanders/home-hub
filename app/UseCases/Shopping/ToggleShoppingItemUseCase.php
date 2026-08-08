@@ -8,7 +8,7 @@ use App\Contracts\Repositories\ShoppingRepositoryInterface;
 use App\Data\ShoppingItemData;
 use App\Models\ShoppingItem;
 
-class ToggleShoppingItem
+class ToggleShoppingItemUseCase
 {
     public function __construct(private readonly ShoppingRepositoryInterface $shopping) {}
 
