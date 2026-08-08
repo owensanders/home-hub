@@ -18,20 +18,17 @@ const tabs = [
 </script>
 
 <template>
-    <div :class="['inline-flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800', containerClass]">
+    <div :class="['inline-flex gap-1.5 rounded-[15px] border border-hh-line bg-hh-panel p-1.5', containerClass]">
         <button
             v-for="{ value, Icon, label } in tabs"
             :key="value"
+            type="button"
+            class="flex items-center gap-1.5 rounded-[11px] px-4 py-2 text-[13px] transition-colors"
+            :class="appearance === value ? 'bg-hh-card font-bold text-hh-ink shadow-hh' : 'font-medium text-hh-ink2 hover:bg-hh-soft'"
             @click="updateAppearance(value)"
-            :class="[
-                'flex items-center rounded-md px-3.5 py-1.5 transition-colors',
-                appearance === value
-                    ? 'bg-white shadow-sm dark:bg-neutral-700 dark:text-neutral-100'
-                    : 'text-neutral-500 hover:bg-neutral-200/60 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-700/60',
-            ]"
         >
-            <component :is="Icon" class="-ml-1 h-4 w-4" />
-            <span class="ml-1.5 text-sm">{{ label }}</span>
+            <component :is="Icon" class="h-4 w-4" />
+            {{ label }}
         </button>
     </div>
 </template>

@@ -3,6 +3,7 @@ import Toast from '@/components/househub/Toast.vue';
 import { useAppearance } from '@/composables/useAppearance';
 import type { SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
+import { House } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -37,8 +38,13 @@ const nav = computed(() => [
     { label: 'House', icon: '🏡', route: 'house.index', badge: 0 },
     { label: 'Documents', icon: '📂', route: 'documents.index', badge: 0 },
     { label: 'Maintenance', icon: '🔧', route: 'maintenance.index', badge: 0 },
-    { label: 'Settings', icon: '⚙', route: 'profile.edit', badge: 0 },
+    // Settings has three sub-pages, so match on the URL prefix rather than one route name.
+    { label: 'Settings', icon: '⚙', route: 'profile.edit', badge: 0, prefix: '/settings' },
 ]);
+
+function isActive(item: { route: string; prefix?: string }): boolean {
+    return item.prefix ? page.url.startsWith(item.prefix) : route().current(item.route);
+}
 
 function toggleTheme(): void {
     updateAppearance(isDark.value ? 'light' : 'dark');
@@ -53,7 +59,9 @@ function toggleTheme(): void {
             <!-- Collapses to an icon rail below `lg`; the design only specified the wide state. -->
             <aside class="flex w-[68px] flex-none flex-col gap-[3px] border-r border-hh-line bg-hh-panel px-[14px] py-[22px] lg:w-[252px]">
                 <div class="flex items-center gap-3 px-2 pb-5 pt-1">
-                    <div class="grid h-9 w-9 flex-none place-items-center rounded-xl bg-hh-coral text-base font-black text-white">H</div>
+                    <div class="grid h-9 w-9 flex-none place-items-center rounded-xl bg-hh-coral text-white">
+                        <House class="h-[19px] w-[19px]" :stroke-width="2.5" />
+                    </div>
                     <div class="hidden flex-col gap-px lg:flex">
                         <span class="text-[16.5px] font-extrabold tracking-tight">HouseHub</span>
                         <span class="text-[11px] text-hh-ink3">The home, organised.</span>
@@ -65,11 +73,7 @@ function toggleTheme(): void {
                     :key="item.route"
                     :href="route(item.route)"
                     class="flex min-h-[44px] w-full items-center gap-3 rounded-[13px] px-3 text-sm transition-colors hover:bg-hh-soft"
-                    :class="
-                        route().current(item.route)
-                            ? 'bg-hh-card font-bold text-hh-ink'
-                            : 'font-medium text-hh-ink2'
-                    "
+                    :class="isActive(item) ? 'bg-hh-card font-bold text-hh-ink' : 'font-medium text-hh-ink2'"
                 >
                     <span class="w-5 flex-none text-center text-sm">{{ item.icon }}</span>
                     <span class="hidden flex-1 lg:block">{{ item.label }}</span>
@@ -101,12 +105,27 @@ function toggleTheme(): void {
                         {{ isDark ? '☀️' : '🌙' }}
                     </button>
 
-                    <div class="flex h-[38px] cursor-default items-center gap-2 rounded-xl bg-hh-soft p-[3px_12px_3px_3px]">
+                    <Link
+                        :href="route('profile.edit')"
+                        title="Settings"
+                        class="flex h-[38px] items-center gap-2 rounded-xl bg-hh-soft p-[3px_12px_3px_3px] transition-colors hover:bg-hh-line"
+                    >
                         <div class="grid h-8 w-8 place-items-center rounded-[10px] bg-hh-mint text-xs font-extrabold text-[#0E1A2B]">
                             {{ initials }}
                         </div>
                         <span class="hidden text-[13px] font-semibold sm:block">{{ user?.name?.split(' ')[0] }}</span>
-                    </div>
+                    </Link>
+
+                    <Link
+                        :href="route('logout')"
+                        method="post"
+                        as="button"
+                        type="button"
+                        title="Sign out"
+                        class="h-[38px] w-[38px] rounded-xl bg-hh-soft text-sm transition-colors hover:bg-hh-line"
+                    >
+                        ⏻
+                    </Link>
                 </header>
 
                 <div class="flex-1 overflow-y-auto px-4 pb-10 pt-6 sm:px-[30px]">
