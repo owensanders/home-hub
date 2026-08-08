@@ -40,7 +40,11 @@ class DashboardTest extends TestCase
         $household = Household::create(['name' => 'The Parkers', 'location' => 'Bristol', 'streak_days' => 12]);
         $user = User::factory()->create(['household_id' => $household->id, 'name' => 'Sarah Parker']);
 
-        $recipe = Recipe::factory()->create(['household_id' => $household->id, 'name' => 'Lemon chicken traybake']);
+        $recipe = Recipe::factory()->create([
+            'household_id' => $household->id,
+            'name' => 'Lemon chicken traybake',
+            'tags' => ['Healthy'],
+        ]);
         PlannedMeal::factory()->create([
             'household_id' => $household->id,
             'recipe_id' => $recipe->id,
@@ -64,6 +68,7 @@ class DashboardTest extends TestCase
                 ->where('dashboard.greeting', fn (string $greeting) => str_contains($greeting, 'Sarah'))
                 ->where('dashboard.streakDays', 12)
                 ->where('dashboard.tonight.name', 'Lemon chicken traybake')
+                ->where('dashboard.tonight.tags', ['Healthy'])
                 ->where('dashboard.shoppingList.name', 'Tesco')
                 ->where('dashboard.shoppingList.remaining', 3)
                 // Recurring chores are not part of today's tally.

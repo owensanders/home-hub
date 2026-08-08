@@ -9,6 +9,7 @@ use Spatie\LaravelData\Data;
 
 class PlannedMealData extends Data
 {
+    /** @param list<string> $tags */
     public function __construct(
         public int $id,
         public string $name,
@@ -16,6 +17,7 @@ class PlannedMealData extends Data
         public ?string $duration,
         public ?string $difficulty,
         public ?string $description,
+        public array $tags,
         public int $tint,
         public int $missingIngredients,
         public string $missingLabel,
@@ -33,6 +35,7 @@ class PlannedMealData extends Data
             duration: $meal->recipe->duration_label,
             difficulty: $meal->recipe->difficulty,
             description: $meal->recipe->description,
+            tags: $meal->recipe->tags ?? [],
             tint: $meal->recipe->tint,
             missingIngredients: $missing,
             missingLabel: $missing === 0 ? 'All in' : "{$missing} missing",

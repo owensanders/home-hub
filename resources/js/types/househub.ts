@@ -74,6 +74,7 @@ export interface PlannedMeal {
     duration: string | null;
     difficulty: string | null;
     description: string | null;
+    tags: string[];
     /** Index into the `--hh-t1` … `--hh-t5` gradient tokens. */
     tint: number;
     missingIngredients: number;

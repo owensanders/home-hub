@@ -101,7 +101,11 @@ function toggleChore(id: number): void {
                         <div class="flex min-w-0 flex-1 flex-col">
                             <div class="flex flex-wrap gap-[7px]">
                                 <span
-                                    v-for="chip in [dashboard.tonight.duration, dashboard.tonight.difficulty].filter(Boolean)"
+                                    v-for="chip in [
+                                        ...dashboard.tonight.tags,
+                                        dashboard.tonight.duration,
+                                        dashboard.tonight.difficulty,
+                                    ].filter(Boolean)"
                                     :key="chip as string"
                                     class="rounded-[9px] bg-hh-soft px-2.5 py-[5px] text-xs font-semibold text-hh-ink2"
                                 >
