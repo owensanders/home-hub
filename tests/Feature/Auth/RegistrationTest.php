@@ -3,6 +3,8 @@
 namespace Tests\Feature\Auth;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -14,6 +16,22 @@ class RegistrationTest extends TestCase
         $response = $this->get('/register');
 
         $response->assertStatus(200);
+    }
+
+    #[Test]
+    public function itPrefillsTheEmailFromTheLandingPageCta(): void
+    {
+        $this->get('/register?email=you@household.co.uk')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('email', 'you@household.co.uk'));
+    }
+
+    #[Test]
+    public function itIgnoresANonStringEmailQueryParameter(): void
+    {
+        $this->get('/register?email[]=you@household.co.uk')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('email', ''));
     }
 
     public function test_new_users_can_register(): void
