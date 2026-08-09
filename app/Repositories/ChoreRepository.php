@@ -22,15 +22,31 @@ class ChoreRepository implements ChoreRepositoryInterface
             ->get();
     }
 
-    public function countByStatus(Household $household, ChoreStatus $status): int
-    {
-        return $household->chores()->where('status', $status)->count();
-    }
-
     public function moveTo(Chore $chore, ChoreStatus $status): Chore
     {
         $chore->update(['status' => $status]);
 
         return $chore->refresh();
+    }
+
+    /** @param array<string, mixed> $attributes */
+    public function create(Household $household, array $attributes): Chore
+    {
+        $position = $household->chores()->where('status', $attributes['status'])->max('position') + 1;
+
+        return $household->chores()->create([...$attributes, 'position' => $position]);
+    }
+
+    /** @param array<string, mixed> $attributes */
+    public function update(Chore $chore, array $attributes): Chore
+    {
+        $chore->update($attributes);
+
+        return $chore->refresh();
+    }
+
+    public function delete(Chore $chore): void
+    {
+        $chore->delete();
     }
 }

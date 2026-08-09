@@ -16,8 +16,6 @@ const { appearance, updateAppearance } = useAppearance();
 
 const isDark = computed(() => appearance.value === 'dark');
 
-const counts = computed(() => page.props.navCounts ?? { shopping: 0, chores: 0 });
-
 const user = computed(() => page.props.auth?.user);
 const initials = computed(() =>
     (user.value?.name ?? '')
@@ -29,17 +27,17 @@ const initials = computed(() =>
 );
 
 const nav = computed(() => [
-    { label: 'Dashboard', icon: '🏠', route: 'dashboard', badge: 0 },
-    { label: 'Calendar', icon: '📅', route: 'calendar.index', badge: 0 },
-    { label: 'Meal Planner', icon: '🍽', route: 'meals.index', badge: 0 },
-    { label: 'Shopping Lists', icon: '🛒', route: 'shopping.index', badge: counts.value.shopping },
-    { label: 'Chores', icon: '✅', route: 'chores.index', badge: counts.value.chores },
-    { label: 'Budget', icon: '💰', route: 'budget.index', badge: 0 },
-    { label: 'House', icon: '🏡', route: 'house.index', badge: 0 },
-    { label: 'Documents', icon: '📂', route: 'documents.index', badge: 0 },
-    { label: 'Maintenance', icon: '🔧', route: 'maintenance.index', badge: 0 },
+    { label: 'Dashboard', icon: '🏠', route: 'dashboard' },
+    { label: 'Calendar', icon: '📅', route: 'calendar.index' },
+    { label: 'Meal Planner', icon: '🍽', route: 'meals.index' },
+    { label: 'Shopping Lists', icon: '🛒', route: 'shopping.index' },
+    { label: 'Chores', icon: '✅', route: 'chores.index' },
+    { label: 'Budget', icon: '💰', route: 'budget.index' },
+    { label: 'House', icon: '🏡', route: 'house.index' },
+    { label: 'Documents', icon: '📂', route: 'documents.index' },
+    { label: 'Maintenance', icon: '🔧', route: 'maintenance.index' },
     // Settings has three sub-pages, so match on the URL prefix rather than one route name.
-    { label: 'Settings', icon: '⚙', route: 'profile.edit', badge: 0, prefix: '/settings' },
+    { label: 'Settings', icon: '⚙', route: 'profile.edit', prefix: '/settings' },
 ]);
 
 function isActive(item: { route: string; prefix?: string }): boolean {
@@ -77,12 +75,6 @@ function toggleTheme(): void {
                 >
                     <span class="w-5 flex-none text-center text-sm">{{ item.icon }}</span>
                     <span class="hidden flex-1 lg:block">{{ item.label }}</span>
-                    <span
-                        v-if="item.badge > 0"
-                        class="hidden h-5 min-w-[20px] place-items-center rounded-[7px] bg-hh-coral px-1.5 text-[11px] font-bold text-white lg:grid"
-                    >
-                        {{ item.badge }}
-                    </span>
                 </Link>
             </aside>
 

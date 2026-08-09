@@ -20,7 +20,6 @@ export interface SharedData {
     name: string;
     auth: Auth;
     household: { id: number; name: string } | null;
-    navCounts: { shopping: number; chores: number } | null;
     flash: { toast: string | null };
     // Inertia's PageProps requires an index signature to be used with usePage<T>().
     [key: string]: unknown;

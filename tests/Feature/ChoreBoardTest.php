@@ -103,4 +103,86 @@ class ChoreBoardTest extends TestCase
 
         $this->assertSame(ChoreStatus::Today, $chore->refresh()->status);
     }
+
+    #[Test]
+    public function itCreatesAChore(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/chores', [
+                'name' => 'Clean the gutters',
+                'status' => 'today',
+                'due_label' => 'This weekend',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Clean the gutters added');
+
+        $this->assertDatabaseHas('chores', [
+            'household_id' => $user->household_id,
+            'name' => 'Clean the gutters',
+            'status' => 'today',
+        ]);
+    }
+
+    #[Test]
+    public function itUpdatesAChore(): void
+    {
+        $user = User::factory()->create();
+        $chore = Chore::factory()->create(['household_id' => $user->household_id, 'name' => 'Water the plants']);
+
+        $this->actingAs($user)
+            ->patch("/chores/{$chore->id}", [
+                'name' => 'Water the houseplants',
+                'status' => 'upcoming',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Water the houseplants updated');
+
+        $chore->refresh();
+        $this->assertSame('Water the houseplants', $chore->name);
+        $this->assertSame(ChoreStatus::Upcoming, $chore->status);
+    }
+
+    #[Test]
+    public function itDoesNotUpdateAnotherHouseholdsChore(): void
+    {
+        $user = User::factory()->create();
+        $stranger = User::factory()->create();
+        $chore = Chore::factory()->create(['household_id' => $stranger->household_id, 'name' => 'Water the plants']);
+
+        $this->actingAs($user)
+            ->patch("/chores/{$chore->id}", ['name' => 'Hijacked', 'status' => 'today'])
+            ->assertNotFound();
+
+        $this->assertSame('Water the plants', $chore->refresh()->name);
+    }
+
+    #[Test]
+    public function itDeletesAChore(): void
+    {
+        $user = User::factory()->create();
+        $chore = Chore::factory()->create(['household_id' => $user->household_id, 'name' => 'Take out the bins']);
+
+        $this->actingAs($user)
+            ->delete("/chores/{$chore->id}")
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Take out the bins deleted');
+
+        $this->assertDatabaseMissing('chores', ['id' => $chore->id]);
+    }
+
+    #[Test]
+    public function itDoesNotDeleteAnotherHouseholdsChore(): void
+    {
+        $user = User::factory()->create();
+        $stranger = User::factory()->create();
+        $chore = Chore::factory()->create(['household_id' => $stranger->household_id]);
+
+        $this->actingAs($user)
+            ->delete("/chores/{$chore->id}")
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('chores', ['id' => $chore->id]);
+    }
 }

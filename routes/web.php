@@ -30,6 +30,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('shopping/{slug?}', [ShoppingListController::class, 'index'])->name('shopping.index');
     Route::post('shopping/{slug}/items', [ShoppingListController::class, 'store'])->name('shopping.items.store');
     Route::patch('shopping-items/{item}/toggle', [ShoppingListController::class, 'toggle'])->name('shopping.items.toggle');
+    Route::patch('shopping-items/{item}', [ShoppingListController::class, 'updateItem'])->name('shopping.items.update');
+    Route::delete('shopping-items/{item}', [ShoppingListController::class, 'destroyItem'])->name('shopping.items.destroy');
+
+    Route::post('shopping-lists', [ShoppingListController::class, 'storeList'])->name('shopping.lists.store');
+    Route::patch('shopping-lists/{list}', [ShoppingListController::class, 'updateList'])->name('shopping.lists.update');
+    Route::delete('shopping-lists/{list}', [ShoppingListController::class, 'destroyList'])->name('shopping.lists.destroy');
 
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
     Route::post('calendar/events', [CalendarController::class, 'store'])->name('calendar.events.store');
@@ -37,6 +43,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::delete('calendar/events/{event}', [CalendarController::class, 'destroy'])->name('calendar.events.destroy');
 
     Route::get('chores', [ChoreController::class, 'index'])->name('chores.index');
+    Route::post('chores', [ChoreController::class, 'store'])->name('chores.store');
+    Route::patch('chores/{chore}', [ChoreController::class, 'update'])->name('chores.update');
+    Route::delete('chores/{chore}', [ChoreController::class, 'destroy'])->name('chores.destroy');
     Route::patch('chores/{chore}/toggle', [ChoreController::class, 'toggle'])->name('chores.toggle');
     Route::patch('chores/{chore}/move', [ChoreController::class, 'move'])->name('chores.move');
 

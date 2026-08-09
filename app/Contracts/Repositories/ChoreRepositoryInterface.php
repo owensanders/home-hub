@@ -14,7 +14,13 @@ interface ChoreRepositoryInterface
     /** @return Collection<int, Chore> */
     public function allFor(Household $household): Collection;
 
-    public function countByStatus(Household $household, ChoreStatus $status): int;
-
     public function moveTo(Chore $chore, ChoreStatus $status): Chore;
+
+    /** @param array<string, mixed> $attributes */
+    public function create(Household $household, array $attributes): Chore;
+
+    /** @param array<string, mixed> $attributes */
+    public function update(Chore $chore, array $attributes): Chore;
+
+    public function delete(Chore $chore): void;
 }

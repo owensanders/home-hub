@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { dial, tickStyle } from '@/lib/househub';
-import type { ChoreColumn, ChoreStatus, MemberScore } from '@/types/househub';
-import { router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import type { Chore, ChoreColumn, ChoreStatus, Member, MemberScore } from '@/types/househub';
+import { router, useForm } from '@inertiajs/vue3';
+import { Plus } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
-defineProps<{
+const props = defineProps<{
     columns: ChoreColumn[];
     scores: MemberScore[];
+    members: Member[];
 }>();
 
 const draggingId = ref<number | null>(null);
@@ -34,11 +37,93 @@ function drop(status: ChoreStatus): void {
 function toggle(id: number): void {
     router.patch(route('chores.toggle', { chore: id }), {}, { preserveScroll: true });
 }
+
+const open = ref(false);
+const editing = ref<Chore | null>(null);
+
+const form = useForm({
+    name: '',
+    assigned_to: '',
+    status: 'today' as ChoreStatus,
+    due_label: '',
+    repeat_label: '',
+});
+
+const dialogTitle = computed(() => (editing.value ? 'Edit chore' : 'New chore'));
+const statusOptions = computed(() => props.columns.map((column) => ({ value: column.status, label: column.title })));
+
+function openNew(): void {
+    editing.value = null;
+    form.clearErrors();
+    form.defaults({
+        name: '',
+        assigned_to: '',
+        status: 'today',
+        due_label: '',
+        repeat_label: '',
+    });
+    form.reset();
+    open.value = true;
+}
+
+function openEdit(chore: Chore): void {
+    editing.value = chore;
+    form.clearErrors();
+    form.defaults({
+        name: chore.name,
+        assigned_to: chore.assignee ? String(chore.assignee.id) : '',
+        status: chore.status,
+        due_label: chore.dueLabel ?? '',
+        repeat_label: chore.repeatLabel ?? '',
+    });
+    form.reset();
+    open.value = true;
+}
+
+function submit(): void {
+    const options = {
+        preserveScroll: true,
+        onSuccess: () => {
+            open.value = false;
+        },
+    };
+
+    form.transform((data) => ({
+        ...data,
+        assigned_to: data.assigned_to === '' ? null : Number(data.assigned_to),
+    }));
+
+    if (editing.value) {
+        form.patch(route('chores.update', { chore: editing.value.id }), options);
+    } else {
+        form.post(route('chores.store'), options);
+    }
+}
+
+function destroy(): void {
+    if (editing.value === null || !confirm('Delete this chore?')) {
+        return;
+    }
+
+    router.delete(route('chores.destroy', { chore: editing.value.id }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            open.value = false;
+        },
+    });
+}
 </script>
 
 <template>
     <HouseHubLayout title="Chores" subtitle="This week">
         <div class="flex animate-hh-rise flex-col gap-[18px]">
+            <div class="flex items-center gap-2">
+                <button type="button" class="hh-btn w-auto bg-hh-coral text-white" @click="openNew">
+                    <Plus class="h-4 w-4" :stroke-width="2.5" />
+                    New chore
+                </button>
+            </div>
+
             <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
                 <div
                     v-for="score in scores"
@@ -85,6 +170,7 @@ function toggle(id: number): void {
                         :style="{ opacity: draggingId === chore.id ? 0.4 : 1 }"
                         @dragstart="startDrag($event, chore.id)"
                         @dragend="draggingId = null"
+                        @click="openEdit(chore)"
                     >
                         <div class="flex items-start gap-2.5">
                             <!-- Ticking lives on the box alone so it can't fire at the end of a drag. -->
@@ -93,7 +179,7 @@ function toggle(id: number): void {
                                 :aria-label="chore.done ? `Mark ${chore.name} as not done` : `Mark ${chore.name} as done`"
                                 class="mt-px grid h-[19px] w-[19px] flex-none place-items-center rounded-full border-[1.5px] text-[11px] text-[#0E1A2B]"
                                 :style="tickStyle(chore.done)"
-                                @click="toggle(chore.id)"
+                                @click.stop="toggle(chore.id)"
                             >
                                 {{ chore.done ? '✓' : '' }}
                             </button>
@@ -124,5 +210,63 @@ function toggle(id: number): void {
                 </div>
             </div>
         </div>
+
+        <!-- Add / edit -->
+        <Dialog :open="open" @update:open="open = $event">
+            <DialogContent class="rounded-[22px] border-hh-line bg-hh-card text-hh-ink sm:rounded-[22px]">
+                <DialogHeader>
+                    <DialogTitle class="text-[16px] font-extrabold tracking-tight">{{ dialogTitle }}</DialogTitle>
+                </DialogHeader>
+
+                <form class="flex flex-col gap-4" @submit.prevent="submit">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="name" class="hh-label">Name</label>
+                        <input id="name" v-model="form.name" type="text" class="hh-input" required placeholder="What needs doing?" />
+                        <p v-if="form.errors.name" class="text-[12.5px] text-hh-coral">{{ form.errors.name }}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="status" class="hh-label">Status</label>
+                            <select id="status" v-model="form.status" class="hh-input">
+                                <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                                    {{ option.label }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label for="assigned_to" class="hh-label">Assignee</label>
+                            <select id="assigned_to" v-model="form.assigned_to" class="hh-input">
+                                <option value="">Unassigned</option>
+                                <option v-for="member in members" :key="member.id" :value="String(member.id)">
+                                    {{ member.name }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="due_label" class="hh-label">Due</label>
+                            <input id="due_label" v-model="form.due_label" type="text" class="hh-input" placeholder="Today" />
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label for="repeat_label" class="hh-label">Repeats</label>
+                            <input id="repeat_label" v-model="form.repeat_label" type="text" class="hh-input" placeholder="Weekly" />
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="form.processing">
+                            {{ editing ? 'Save changes' : 'Add chore' }}
+                        </button>
+                        <button type="button" class="hh-btn w-auto bg-hh-soft text-hh-ink" @click="open = false">Cancel</button>
+                        <button v-if="editing" type="button" class="hh-btn ml-auto w-auto bg-hh-soft text-hh-coral" @click="destroy">Delete</button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
     </HouseHubLayout>
 </template>
