@@ -19,6 +19,9 @@ use Illuminate\Notifications\Notifiable;
  * @property \App\Enums\Palette $colour
  * @property string|null $status_line
  * @property string $email
+ * @property \Illuminate\Support\Carbon|null $email_verified_at
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $updated_at
  */
 class User extends Authenticatable implements MustVerifyEmail
 {

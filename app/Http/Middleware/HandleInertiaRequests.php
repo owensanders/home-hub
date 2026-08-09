@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use App\Contracts\Repositories\ChoreRepositoryInterface;
-use App\Contracts\Repositories\ShoppingRepositoryInterface;
-use App\Enums\ChoreStatus;
-use App\Models\Household;
+use App\Data\AuthUserData;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -19,11 +16,6 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
-
-    public function __construct(
-        private readonly ShoppingRepositoryInterface $shopping,
-        private readonly ChoreRepositoryInterface $chores,
-    ) {}
 
     /** @see https://inertiajs.com/asset-versioning */
     public function version(Request $request): ?string
@@ -44,29 +36,14 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() !== null ? AuthUserData::from($request->user()) : null,
             ],
             'household' => $household !== null
                 ? ['id' => $household->id, 'name' => $household->name]
                 : null,
-            'navCounts' => $household !== null ? $this->navCounts($household) : null,
             'flash' => [
                 'toast' => fn () => $request->session()->get('toast'),
             ],
-        ];
-    }
-
-    /**
-     * The two badges the sidebar shows: items still to buy on the default list,
-     * and chores still due today.
-     *
-     * @return array{shopping: int, chores: int}
-     */
-    private function navCounts(Household $household): array
-    {
-        return [
-            'shopping' => $this->shopping->countRemainingOnDefaultList($household),
-            'chores' => $this->chores->countByStatus($household, ChoreStatus::Today),
         ];
     }
 }
