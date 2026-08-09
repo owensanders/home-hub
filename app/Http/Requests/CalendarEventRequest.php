@@ -15,7 +15,7 @@ class CalendarEventRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:120'],
-            'starts_at' => ['required', 'date'],
+            'starts_at' => ['required', 'date', 'after_or_equal:today'],
             // An all-day event has no end time, so a stale one must not block the save.
             'ends_at' => ['exclude_if:is_all_day,true', 'nullable', 'date', 'after:starts_at'],
             'is_all_day' => ['boolean'],
@@ -36,6 +36,7 @@ class CalendarEventRequest extends FormRequest
     {
         return [
             'title.required' => 'Give the event a title.',
+            'starts_at.after_or_equal' => 'The event can\'t be scheduled in the past.',
             'ends_at.after' => 'The end time must be after the start time.',
         ];
     }

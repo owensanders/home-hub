@@ -279,6 +279,58 @@ class CalendarTest extends TestCase
     }
 
     #[Test]
+    public function itRejectsCreatingAnEventInThePast(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/calendar/events', [
+                'title' => 'Time travel',
+                'starts_at' => CarbonImmutable::yesterday()->setTime(18, 0)->format('Y-m-d\TH:i'),
+            ])
+            ->assertSessionHasErrors('starts_at');
+
+        $this->assertDatabaseCount('calendar_events', 0);
+    }
+
+    #[Test]
+    public function itRejectsMovingAnEventToThePast(): void
+    {
+        $user = User::factory()->create();
+        $event = CalendarEvent::factory()->create([
+            'household_id' => $user->household_id,
+            'starts_at' => CarbonImmutable::tomorrow()->setTime(10, 0),
+        ]);
+
+        $this->actingAs($user)
+            ->patch("/calendar/events/{$event->id}", [
+                'title' => $event->title,
+                'starts_at' => CarbonImmutable::yesterday()->setTime(10, 0)->format('Y-m-d\TH:i'),
+            ])
+            ->assertSessionHasErrors('starts_at');
+    }
+
+    #[Test]
+    public function itLocksAnAlreadyPastEventFromBeingUpdated(): void
+    {
+        $user = User::factory()->create();
+        $event = CalendarEvent::factory()->create([
+            'household_id' => $user->household_id,
+            'title' => 'Old event',
+            'starts_at' => CarbonImmutable::yesterday()->setTime(10, 0),
+        ]);
+
+        $this->actingAs($user)
+            ->patch("/calendar/events/{$event->id}", [
+                'title' => 'Renamed',
+                'starts_at' => CarbonImmutable::yesterday()->setTime(10, 0)->format('Y-m-d\TH:i'),
+            ])
+            ->assertSessionHasErrors('starts_at');
+
+        $this->assertSame('Old event', $event->refresh()->title);
+    }
+
+    #[Test]
     public function itRejectsAnEndTimeBeforeTheStart(): void
     {
         $user = User::factory()->create();

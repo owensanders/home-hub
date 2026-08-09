@@ -45,6 +45,8 @@ function visibleEvents(day: CalendarDay): CalendarEvent[] {
 
 const dialogTitle = computed(() => (editing.value ? 'Edit event' : 'New event'));
 
+const todayIso = computed(() => new Date().toISOString().slice(0, 10));
+
 /** What the toolbar button defaults to: today if it's on screen, else the 1st of the month shown. */
 const defaultDay = computed(
     () => props.calendar.days.find((day) => day.isToday) ?? props.calendar.days.find((day) => day.isCurrentMonth)!,
@@ -56,7 +58,7 @@ function openNew(day: CalendarDay): void {
     form.clearErrors();
     form.defaults({
         title: '',
-        starts_at: `${day.date}T09:00`,
+        starts_at: `${day.date < todayIso.value ? todayIso.value : day.date}T09:00`,
         ends_at: '',
         is_all_day: false,
         location: '',
@@ -69,6 +71,10 @@ function openNew(day: CalendarDay): void {
 }
 
 async function openEdit(event: CalendarEvent): Promise<void> {
+    if (event.date < todayIso.value) {
+        return;
+    }
+
     editing.value = event;
 
     // Let the "+N more" dialog finish unmounting before the editor mounts, or the
@@ -213,6 +219,7 @@ function destroy(): void {
                                     {{ day.dateLabel }}
                                 </span>
                                 <button
+                                    v-if="day.date >= todayIso"
                                     type="button"
                                     class="ml-auto grid h-[22px] w-[22px] place-items-center rounded-md text-hh-ink3 opacity-0 transition hover:bg-hh-soft hover:text-hh-ink focus-visible:opacity-100 group-hover:opacity-100"
                                     :aria-label="`Add an event on ${day.dateLabel}`"
@@ -226,7 +233,8 @@ function destroy(): void {
                                 v-for="event in visibleEvents(day).slice(0, VISIBLE_PER_CELL)"
                                 :key="event.id"
                                 type="button"
-                                class="flex items-center gap-1.5 rounded-[9px] bg-hh-soft px-1.5 py-1 text-left transition hover:translate-x-[2px]"
+                                :disabled="event.date < todayIso"
+                                class="flex items-center gap-1.5 rounded-[9px] bg-hh-soft px-1.5 py-1 text-left transition hover:translate-x-[2px] disabled:opacity-50 disabled:hover:translate-x-0"
                                 @click="openEdit(event)"
                             >
                                 <span class="h-[22px] w-[3px] flex-none rounded-sm" :style="{ background: event.colour }"></span>
@@ -272,7 +280,8 @@ function destroy(): void {
                         v-for="event in expandedDay ? visibleEvents(expandedDay) : []"
                         :key="event.id"
                         type="button"
-                        class="flex items-center gap-3 rounded-[13px] bg-hh-sunk px-3 py-2.5 text-left transition hover:translate-x-[3px]"
+                        :disabled="event.date < todayIso"
+                        class="flex items-center gap-3 rounded-[13px] bg-hh-sunk px-3 py-2.5 text-left transition hover:translate-x-[3px] disabled:opacity-50 disabled:hover:translate-x-0"
                         @click="openEdit(event)"
                     >
                         <span class="h-[30px] w-[3px] flex-none rounded-sm" :style="{ background: event.colour }"></span>
@@ -306,7 +315,14 @@ function destroy(): void {
                     <div class="grid grid-cols-2 gap-3">
                         <div class="flex flex-col gap-1.5">
                             <label for="starts_at" class="hh-label">Starts</label>
-                            <input id="starts_at" v-model="form.starts_at" type="datetime-local" class="hh-input" required />
+                            <input
+                                id="starts_at"
+                                v-model="form.starts_at"
+                                type="datetime-local"
+                                class="hh-input"
+                                :min="`${todayIso}T00:00`"
+                                required
+                            />
                             <p v-if="form.errors.starts_at" class="text-[12.5px] text-hh-coral">{{ form.errors.starts_at }}</p>
                         </div>
 
