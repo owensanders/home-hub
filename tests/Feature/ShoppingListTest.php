@@ -94,6 +94,144 @@ class ShoppingListTest extends TestCase
     }
 
     #[Test]
+    public function itCreatesAShoppingList(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/shopping-lists', ['name' => 'Aldi', 'colour' => 'sun'])
+            ->assertRedirect()
+            ->assertSessionHas('toast');
+
+        $this->assertDatabaseHas('shopping_lists', [
+            'household_id' => $user->household_id,
+            'name' => 'Aldi',
+            'slug' => 'aldi',
+            'colour' => 'sun',
+        ]);
+    }
+
+    #[Test]
+    public function itRenamesAShoppingList(): void
+    {
+        $user = User::factory()->create();
+        $list = ShoppingList::factory()->create(['household_id' => $user->household_id, 'name' => 'Tesco', 'slug' => 'tesco', 'colour' => 'mint']);
+
+        $this->actingAs($user)
+            ->patch("/shopping-lists/{$list->id}", ['name' => 'Big Tesco', 'colour' => 'sky'])
+            ->assertRedirect()
+            ->assertSessionHas('toast');
+
+        $list->refresh();
+        $this->assertSame('Big Tesco', $list->name);
+        $this->assertSame('sky', $list->colour->value);
+        $this->assertSame('tesco', $list->slug);
+    }
+
+    #[Test]
+    public function itDoesNotRenameAnotherHouseholdsShoppingList(): void
+    {
+        $user = User::factory()->create();
+        $stranger = User::factory()->create();
+        $theirList = ShoppingList::factory()->create(['household_id' => $stranger->household_id, 'name' => 'Theirs']);
+
+        $this->actingAs($user)
+            ->patch("/shopping-lists/{$theirList->id}", ['name' => 'Hijacked'])
+            ->assertNotFound();
+
+        $this->assertSame('Theirs', $theirList->refresh()->name);
+    }
+
+    #[Test]
+    public function itDeletesAShoppingListAndItsItems(): void
+    {
+        $user = User::factory()->create();
+        $list = ShoppingList::factory()->create(['household_id' => $user->household_id]);
+        $item = ShoppingItem::factory()->create(['shopping_list_id' => $list->id]);
+
+        $this->actingAs($user)
+            ->delete("/shopping-lists/{$list->id}")
+            ->assertRedirect()
+            ->assertSessionHas('toast');
+
+        $this->assertDatabaseMissing('shopping_lists', ['id' => $list->id]);
+        $this->assertDatabaseMissing('shopping_items', ['id' => $item->id]);
+    }
+
+    #[Test]
+    public function itDoesNotDeleteAnotherHouseholdsShoppingList(): void
+    {
+        $user = User::factory()->create();
+        $stranger = User::factory()->create();
+        $theirList = ShoppingList::factory()->create(['household_id' => $stranger->household_id]);
+
+        $this->actingAs($user)->delete("/shopping-lists/{$theirList->id}")->assertNotFound();
+
+        $this->assertDatabaseHas('shopping_lists', ['id' => $theirList->id]);
+    }
+
+    #[Test]
+    public function itUpdatesAShoppingItem(): void
+    {
+        $user = User::factory()->create();
+        $list = ShoppingList::factory()->create(['household_id' => $user->household_id]);
+        $item = ShoppingItem::factory()->create(['shopping_list_id' => $list->id, 'name' => 'Milk', 'category' => ShoppingCategory::Fresh]);
+
+        $this->actingAs($user)
+            ->patch("/shopping-items/{$item->id}", ['name' => 'Oat milk', 'quantity' => 'x2', 'category' => 'frozen'])
+            ->assertRedirect()
+            ->assertSessionHas('toast');
+
+        $item->refresh();
+        $this->assertSame('Oat milk', $item->name);
+        $this->assertSame('x2', $item->quantity);
+        $this->assertSame(ShoppingCategory::Frozen, $item->category);
+    }
+
+    #[Test]
+    public function itDoesNotUpdateAnotherHouseholdsShoppingItem(): void
+    {
+        $user = User::factory()->create();
+        $stranger = User::factory()->create();
+        $theirList = ShoppingList::factory()->create(['household_id' => $stranger->household_id]);
+        $theirItem = ShoppingItem::factory()->create(['shopping_list_id' => $theirList->id, 'name' => 'Theirs']);
+
+        $this->actingAs($user)
+            ->patch("/shopping-items/{$theirItem->id}", ['name' => 'Hijacked'])
+            ->assertNotFound();
+
+        $this->assertSame('Theirs', $theirItem->refresh()->name);
+    }
+
+    #[Test]
+    public function itDeletesAShoppingItem(): void
+    {
+        $user = User::factory()->create();
+        $list = ShoppingList::factory()->create(['household_id' => $user->household_id]);
+        $item = ShoppingItem::factory()->create(['shopping_list_id' => $list->id]);
+
+        $this->actingAs($user)
+            ->delete("/shopping-items/{$item->id}")
+            ->assertRedirect()
+            ->assertSessionHas('toast');
+
+        $this->assertDatabaseMissing('shopping_items', ['id' => $item->id]);
+    }
+
+    #[Test]
+    public function itDoesNotDeleteAnotherHouseholdsShoppingItem(): void
+    {
+        $user = User::factory()->create();
+        $stranger = User::factory()->create();
+        $theirList = ShoppingList::factory()->create(['household_id' => $stranger->household_id]);
+        $theirItem = ShoppingItem::factory()->create(['shopping_list_id' => $theirList->id]);
+
+        $this->actingAs($user)->delete("/shopping-items/{$theirItem->id}")->assertNotFound();
+
+        $this->assertDatabaseHas('shopping_items', ['id' => $theirItem->id]);
+    }
+
+    #[Test]
     public function itDoesNotLeakItemsFromAnotherHousehold(): void
     {
         $user = User::factory()->create();

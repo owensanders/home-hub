@@ -1,14 +1,20 @@
 <script setup lang="ts">
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { tickStyle } from '@/lib/househub';
-import type { ShoppingGroup, ShoppingList } from '@/types/househub';
+import type { ShoppingGroup, ShoppingItem, ShoppingList } from '@/types/househub';
 import { Link, router, useForm } from '@inertiajs/vue3';
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
     lists: ShoppingList[];
     active: ShoppingList | null;
     groups: ShoppingGroup[];
 }>();
+
+const COLOURS = ['mint', 'lilac', 'sun', 'sky', 'coral'];
+const CATEGORIES = ['fruit', 'vegetables', 'fresh', 'frozen', 'bakery', 'household'];
 
 const draft = useForm({ name: '' });
 
@@ -26,12 +32,117 @@ function addItem(): void {
 function toggleItem(id: number): void {
     router.patch(route('shopping.items.toggle', { item: id }), {}, { preserveScroll: true });
 }
+
+// List create / rename / delete
+const listDialogOpen = ref(false);
+const editingList = ref<ShoppingList | null>(null);
+const listDialogTitle = computed(() => (editingList.value ? 'Rename list' : 'New list'));
+
+const listForm = useForm({ name: '', colour: 'mint' });
+
+function openNewList(): void {
+    editingList.value = null;
+    listForm.clearErrors();
+    listForm.defaults({ name: '', colour: 'mint' });
+    listForm.reset();
+    listDialogOpen.value = true;
+}
+
+function openEditList(list: ShoppingList): void {
+    editingList.value = list;
+    listForm.clearErrors();
+    listForm.defaults({ name: list.name, colour: list.colourKey });
+    listForm.reset();
+    listDialogOpen.value = true;
+}
+
+function submitList(): void {
+    const options = { preserveScroll: true, onSuccess: () => (listDialogOpen.value = false) };
+
+    if (editingList.value) {
+        listForm.patch(route('shopping.lists.update', { list: editingList.value.id }), options);
+    } else {
+        listForm.post(route('shopping.lists.store'), options);
+    }
+}
+
+function destroyActiveList(): void {
+    if (!props.active) {
+        return;
+    }
+
+    const list = props.active;
+    requestConfirm(`Delete "${list.name}"? All its items will be removed too.`, () => {
+        router.delete(route('shopping.lists.destroy', { list: list.id }));
+    });
+}
+
+// Item edit / delete
+const itemDialogOpen = ref(false);
+const editingItem = ref<ShoppingItem | null>(null);
+
+const itemForm = useForm({ name: '', quantity: '', category: 'fresh' });
+
+function openEditItem(item: ShoppingItem): void {
+    editingItem.value = item;
+    itemForm.clearErrors();
+    itemForm.defaults({ name: item.name, quantity: item.quantity ?? '', category: item.category });
+    itemForm.reset();
+    itemDialogOpen.value = true;
+}
+
+function submitItem(): void {
+    if (editingItem.value === null) {
+        return;
+    }
+
+    itemForm.patch(route('shopping.items.update', { item: editingItem.value.id }), {
+        preserveScroll: true,
+        onSuccess: () => (itemDialogOpen.value = false),
+    });
+}
+
+function destroyItem(): void {
+    if (editingItem.value === null) {
+        return;
+    }
+
+    const item = editingItem.value;
+    requestConfirm('Delete this item?', () => {
+        router.delete(route('shopping.items.destroy', { item: item.id }), {
+            preserveScroll: true,
+            onSuccess: () => (itemDialogOpen.value = false),
+        });
+    });
+}
+
+// Shared delete-confirmation dialog
+const confirmDialogOpen = ref(false);
+const confirmMessage = ref('');
+let pendingAction: (() => void) | null = null;
+
+function requestConfirm(message: string, action: () => void): void {
+    confirmMessage.value = message;
+    pendingAction = action;
+    confirmDialogOpen.value = true;
+}
+
+function confirmDestroy(): void {
+    confirmDialogOpen.value = false;
+    pendingAction?.();
+    pendingAction = null;
+}
 </script>
 
 <template>
     <HouseHubLayout title="Shopping Lists" :subtitle="`${lists.length} lists`">
         <div class="flex animate-hh-rise flex-col items-start gap-5 lg:flex-row">
             <div class="flex w-full flex-none flex-col gap-1.5 lg:w-[232px]">
+                <button type="button" class="hh-btn mb-1 w-auto self-start bg-hh-coral text-white" @click="openNewList">
+                    <Plus class="h-4 w-4" :stroke-width="2.5" />
+                    New list
+                </button>
+
                 <Link
                     v-for="list in lists"
                     :key="list.id"
@@ -47,10 +158,23 @@ function toggleItem(id: number): void {
 
             <div v-if="active" class="w-full min-w-0 flex-1 rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
                 <div class="flex items-center gap-3 border-b border-hh-line pb-4">
-                    <div>
-                        <h3 class="text-lg font-extrabold tracking-[-0.02em]">{{ active.name }}</h3>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-1.5">
+                            <h3 class="text-lg font-extrabold tracking-[-0.02em]">{{ active.name }}</h3>
+                            <button
+                                type="button"
+                                aria-label="Rename list"
+                                class="rounded-lg p-1 transition hover:bg-hh-soft"
+                                @click="openEditList(active)"
+                            >
+                                <Pencil class="h-3.5 w-3.5 text-hh-ink3" />
+                            </button>
+                        </div>
                         <div class="mt-1 text-[13px] text-hh-ink3">{{ active.remaining }} items left</div>
                     </div>
+                    <button type="button" aria-label="Delete list" class="rounded-lg p-1.5 transition hover:bg-hh-soft" @click="destroyActiveList">
+                        <Trash2 class="h-4 w-4 text-hh-ink3" />
+                    </button>
                 </div>
 
                 <form class="my-4 flex gap-2" @submit.prevent="addItem">
@@ -73,29 +197,132 @@ function toggleItem(id: number): void {
                 <div class="grid grid-cols-1 gap-x-7 gap-y-2.5 md:grid-cols-2">
                     <div v-for="group in groups" :key="group.label">
                         <div class="mb-1 mt-2 text-[11px] font-bold uppercase tracking-[0.09em] text-hh-ink3">{{ group.label }}</div>
-                        <button
-                            v-for="item in group.items"
-                            :key="item.id"
-                            type="button"
-                            class="flex min-h-[46px] w-full items-center gap-3 rounded-[13px] px-2.5 text-left transition-colors hover:bg-hh-soft"
-                            @click="toggleItem(item.id)"
-                        >
-                            <span
-                                class="grid h-[22px] w-[22px] flex-none place-items-center rounded-lg border-[1.5px] text-xs text-[#0E1A2B] transition"
-                                :style="tickStyle(item.done)"
+                        <div v-for="item in group.items" :key="item.id" class="group relative">
+                            <button
+                                type="button"
+                                class="flex min-h-[46px] w-full items-center gap-3 rounded-[13px] px-2.5 pr-8 text-left transition-colors hover:bg-hh-soft"
+                                @click="toggleItem(item.id)"
                             >
-                                {{ item.done ? '✓' : '' }}
-                            </span>
-                            <span class="flex-1 text-[14.5px]" :class="item.done ? 'text-hh-ink3 line-through' : 'text-hh-ink'">
-                                {{ item.name }}
-                            </span>
-                            <span class="font-mono text-[11.5px] text-hh-ink3">{{ item.quantity }}</span>
-                        </button>
+                                <span
+                                    class="grid h-[22px] w-[22px] flex-none place-items-center rounded-lg border-[1.5px] text-xs text-[#0E1A2B] transition"
+                                    :style="tickStyle(item.done)"
+                                >
+                                    {{ item.done ? '✓' : '' }}
+                                </span>
+                                <span class="flex-1 text-[14.5px]" :class="item.done ? 'text-hh-ink3 line-through' : 'text-hh-ink'">
+                                    {{ item.name }}
+                                </span>
+                                <span class="font-mono text-[11.5px] text-hh-ink3">{{ item.quantity }}</span>
+                            </button>
+                            <button
+                                type="button"
+                                aria-label="Edit item"
+                                class="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 transition group-hover:opacity-100"
+                                @click.stop="openEditItem(item)"
+                            >
+                                <Pencil class="h-3.5 w-3.5 text-hh-ink3" />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <p v-if="groups.length === 0" class="py-10 text-center text-sm text-hh-ink3">This list is empty.</p>
             </div>
         </div>
+
+        <!-- Create / rename list -->
+        <Dialog :open="listDialogOpen" @update:open="listDialogOpen = $event">
+            <DialogContent class="rounded-[22px] border-hh-line bg-hh-card text-hh-ink sm:rounded-[22px]">
+                <DialogHeader>
+                    <DialogTitle class="text-[16px] font-extrabold tracking-tight">{{ listDialogTitle }}</DialogTitle>
+                </DialogHeader>
+
+                <form class="flex flex-col gap-4" @submit.prevent="submitList">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="list-name" class="hh-label">Name</label>
+                        <input id="list-name" v-model="listForm.name" type="text" class="hh-input" required placeholder="e.g. Tesco" />
+                        <p v-if="listForm.errors.name" class="text-[12.5px] text-hh-coral">{{ listForm.errors.name }}</p>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <span class="hh-label">Colour</span>
+                        <div class="flex gap-2">
+                            <button
+                                v-for="colour in COLOURS"
+                                :key="colour"
+                                type="button"
+                                :title="colour"
+                                :aria-label="colour"
+                                :aria-pressed="listForm.colour === colour"
+                                class="h-7 w-7 rounded-[9px] transition"
+                                :class="listForm.colour === colour ? 'ring-2 ring-hh-ink ring-offset-2 ring-offset-hh-card' : ''"
+                                :style="{ background: `var(--hh-${colour})` }"
+                                @click="listForm.colour = colour"
+                            ></button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="listForm.processing">
+                            {{ editingList ? 'Save changes' : 'Add list' }}
+                        </button>
+                        <button type="button" class="hh-btn w-auto bg-hh-soft text-hh-ink" @click="listDialogOpen = false">Cancel</button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Edit item -->
+        <Dialog :open="itemDialogOpen" @update:open="itemDialogOpen = $event">
+            <DialogContent class="rounded-[22px] border-hh-line bg-hh-card text-hh-ink sm:rounded-[22px]">
+                <DialogHeader>
+                    <DialogTitle class="text-[16px] font-extrabold tracking-tight">Edit item</DialogTitle>
+                </DialogHeader>
+
+                <form class="flex flex-col gap-4" @submit.prevent="submitItem">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="item-name" class="hh-label">Name</label>
+                        <input id="item-name" v-model="itemForm.name" type="text" class="hh-input" required />
+                        <p v-if="itemForm.errors.name" class="text-[12.5px] text-hh-coral">{{ itemForm.errors.name }}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="item-quantity" class="hh-label">Quantity</label>
+                            <input id="item-quantity" v-model="itemForm.quantity" type="text" class="hh-input" placeholder="x1" />
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label for="item-category" class="hh-label">Aisle</label>
+                            <select id="item-category" v-model="itemForm.category" class="hh-input">
+                                <option v-for="category in CATEGORIES" :key="category" :value="category">{{ category }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="itemForm.processing">Save changes</button>
+                        <button type="button" class="hh-btn w-auto bg-hh-soft text-hh-ink" @click="itemDialogOpen = false">Cancel</button>
+                        <button type="button" class="hh-btn ml-auto w-auto bg-hh-soft text-hh-coral" @click="destroyItem">Delete</button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Confirm delete -->
+        <Dialog :open="confirmDialogOpen" @update:open="confirmDialogOpen = $event">
+            <DialogContent class="rounded-[22px] border-hh-line bg-hh-card text-hh-ink sm:rounded-[22px]">
+                <DialogHeader>
+                    <DialogTitle class="text-[16px] font-extrabold tracking-tight">Are you sure?</DialogTitle>
+                </DialogHeader>
+
+                <p class="text-[13.5px] text-hh-ink2">{{ confirmMessage }}</p>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" class="hh-btn w-auto bg-hh-coral text-white" @click="confirmDestroy">Delete</button>
+                    <button type="button" class="hh-btn w-auto bg-hh-soft text-hh-ink" @click="confirmDialogOpen = false">Cancel</button>
+                </div>
+            </DialogContent>
+        </Dialog>
     </HouseHubLayout>
 </template>

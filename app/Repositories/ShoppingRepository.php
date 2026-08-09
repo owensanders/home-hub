@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Contracts\Repositories\ShoppingRepositoryInterface;
+use App\Enums\Palette;
 use App\Enums\ShoppingCategory;
 use App\Models\Household;
 use App\Models\ShoppingItem;
 use App\Models\ShoppingList;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 
 class ShoppingRepository implements ShoppingRepositoryInterface
@@ -30,15 +32,25 @@ class ShoppingRepository implements ShoppingRepositoryInterface
         return $household->shoppingLists()->with('items')->first();
     }
 
-    public function countRemainingOnDefaultList(Household $household): int
+    public function createList(Household $household, string $name, Palette $colour): ShoppingList
     {
-        $listId = $household->shoppingLists()->value('id');
+        return $household->shoppingLists()->create([
+            'name' => $name,
+            'slug' => $this->uniqueSlug($household, $name),
+            'colour' => $colour,
+        ]);
+    }
 
-        if ($listId === null) {
-            return 0;
-        }
+    public function updateList(ShoppingList $list, string $name, Palette $colour): ShoppingList
+    {
+        $list->update(['name' => $name, 'colour' => $colour]);
 
-        return ShoppingItem::where('shopping_list_id', $listId)->whereNull('completed_at')->count();
+        return $list->refresh();
+    }
+
+    public function deleteList(ShoppingList $list): void
+    {
+        $list->delete();
     }
 
     public function addItem(ShoppingList $list, string $name, ?string $quantity, ShoppingCategory $category): ShoppingItem
@@ -51,10 +63,37 @@ class ShoppingRepository implements ShoppingRepositoryInterface
         ]);
     }
 
+    public function updateItem(ShoppingItem $item, string $name, ?string $quantity, ShoppingCategory $category): ShoppingItem
+    {
+        $item->update(['name' => $name, 'quantity' => $quantity, 'category' => $category]);
+
+        return $item->refresh();
+    }
+
+    public function deleteItem(ShoppingItem $item): void
+    {
+        $item->delete();
+    }
+
     public function setItemCompletion(ShoppingItem $item, bool $done): ShoppingItem
     {
         $item->update(['completed_at' => $done ? now() : null]);
 
         return $item->refresh();
+    }
+
+    /** Slugs are unique per household, so a name collision gets a numeric suffix. */
+    private function uniqueSlug(Household $household, string $name): string
+    {
+        $base = Str::slug($name);
+        $slug = $base;
+        $suffix = 2;
+
+        while ($this->findListBySlug($household, $slug) !== null) {
+            $slug = "{$base}-{$suffix}";
+            $suffix++;
+        }
+
+        return $slug;
     }
 }

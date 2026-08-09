@@ -23,7 +23,7 @@ class ShoppingItemData extends Data
             id: $item->id,
             name: $item->name,
             quantity: $item->quantity,
-            category: $item->category->label(),
+            category: $item->category->value,
             done: $item->isDone(),
         );
     }
