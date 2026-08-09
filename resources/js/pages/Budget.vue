@@ -1,0 +1,435 @@
+<script setup lang="ts">
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
+import type { BudgetCategory, BudgetCategoryOption, BudgetTransaction, IncomeSource } from '@/types/househub';
+import { Link, router, useForm } from '@inertiajs/vue3';
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+
+const props = defineProps<{
+    month: string;
+    monthLabel: string;
+    previousMonth: string;
+    nextMonth: string;
+    daysLeftLabel: string;
+    leftToSpend: string;
+    spentLabel: string;
+    budgetedLabel: string;
+    perDay: string;
+    spentPence: number;
+    budgetedPence: number;
+    incomeTotalPence: number;
+    income: IncomeSource[];
+    incomeTotal: string;
+    categories: BudgetCategory[];
+    transactions: BudgetTransaction[];
+    catOptions: BudgetCategoryOption[];
+}>();
+
+function pct(part: number, whole: number): number {
+    return whole > 0 ? Math.min(100, Math.round((part / whole) * 100)) : 0;
+}
+
+const spentPct = computed(() => pct(props.spentPence, props.incomeTotalPence));
+const committedPct = computed(() => pct(Math.max(props.budgetedPence - props.spentPence, 0), props.incomeTotalPence));
+const isCurrentMonth = computed(() => props.month === new Date().toISOString().slice(0, 7));
+
+// Income sources — add / edit / delete
+const incomeOpen = ref(false);
+const editingIncome = ref<IncomeSource | null>(null);
+const incomeDialogTitle = computed(() => (editingIncome.value ? 'Edit income source' : 'New income source'));
+
+const incomeForm = useForm({ label: '', meta: '', amount: '' });
+
+function openNewIncome(): void {
+    editingIncome.value = null;
+    incomeForm.clearErrors();
+    incomeForm.defaults({ label: '', meta: '', amount: '' });
+    incomeForm.reset();
+    incomeOpen.value = true;
+}
+
+function openEditIncome(income: IncomeSource): void {
+    editingIncome.value = income;
+    incomeForm.clearErrors();
+    incomeForm.defaults({
+        label: income.label,
+        meta: income.meta ?? '',
+        amount: (income.amountPence / 100).toString(),
+    });
+    incomeForm.reset();
+    incomeOpen.value = true;
+}
+
+function submitIncome(): void {
+    const options = { preserveScroll: true, onSuccess: () => (incomeOpen.value = false) };
+
+    if (editingIncome.value) {
+        incomeForm.patch(route('budget.income.update', { income: editingIncome.value.id }), options);
+    } else {
+        incomeForm.post(route('budget.income.store'), options);
+    }
+}
+
+function destroyIncome(): void {
+    if (editingIncome.value === null || !confirm('Remove this income source?')) {
+        return;
+    }
+
+    router.delete(route('budget.income.destroy', { income: editingIncome.value.id }), {
+        preserveScroll: true,
+        onSuccess: () => (incomeOpen.value = false),
+    });
+}
+
+// Categories — inline edit / delete, plus an add form at the bottom of the card
+const editingCategoryId = ref<number | null>(null);
+const categoryForm = useForm({ label: '', budgeted: '' });
+
+function openEditCategory(category: BudgetCategory): void {
+    editingCategoryId.value = category.id;
+    categoryForm.clearErrors();
+    categoryForm.defaults({ label: category.label, budgeted: (category.budgetedPence / 100).toString() });
+    categoryForm.reset();
+}
+
+function submitCategory(category: BudgetCategory): void {
+    categoryForm.patch(route('budget.categories.update', { category: category.id }), {
+        preserveScroll: true,
+        onSuccess: () => (editingCategoryId.value = null),
+    });
+}
+
+function destroyCategory(category: BudgetCategory): void {
+    if (!confirm(`Remove "${category.label}"? Its logged spending will be removed too.`)) {
+        return;
+    }
+
+    router.delete(route('budget.categories.destroy', { category: category.id }), { preserveScroll: true });
+}
+
+const newCategoryForm = useForm({ label: '', budgeted: '' });
+
+function addCategory(): void {
+    if (newCategoryForm.label.trim() === '') {
+        return;
+    }
+
+    newCategoryForm.post(route('budget.categories.store', { month: props.month }), {
+        preserveScroll: true,
+        onSuccess: () => newCategoryForm.reset(),
+    });
+}
+
+// Transactions — quick add, plus reassigning a transaction's category
+const transactionForm = useForm({ label: '', amount: '', budget_category_id: '' });
+
+function addTransaction(): void {
+    if (transactionForm.label.trim() === '' || transactionForm.budget_category_id === '') {
+        return;
+    }
+
+    transactionForm.post(route('budget.transactions.store'), {
+        preserveScroll: true,
+        onSuccess: () => transactionForm.reset('label', 'amount'),
+    });
+}
+
+function reassignTransaction(transaction: BudgetTransaction, categoryId: string): void {
+    router.patch(
+        route('budget.transactions.update', { transaction: transaction.id }),
+        { budget_category_id: categoryId },
+        { preserveScroll: true },
+    );
+}
+</script>
+
+<template>
+    <HouseHubLayout title="Budget" :subtitle="monthLabel">
+        <div class="flex animate-hh-rise flex-col gap-4">
+            <!-- Hero -->
+            <section
+                class="relative flex flex-col items-stretch gap-5 overflow-hidden rounded-[22px] p-6 text-hh-onhero lg:flex-row"
+                style="background: linear-gradient(118deg, var(--hh-hero1) 0%, var(--hh-hero2) 100%)"
+            >
+                <div class="absolute -top-24 right-52 h-72 w-72 rounded-full bg-hh-coral opacity-20 blur-3xl"></div>
+
+                <div class="relative min-w-0 flex-1">
+                    <div class="flex items-center gap-2.5">
+                        <Link
+                            :href="route('budget.index', { month: previousMonth })"
+                            class="grid h-8 w-8 place-items-center rounded-[10px] border border-hh-heroline bg-hh-herofilm text-[13px]"
+                        >
+                            ‹
+                        </Link>
+                        <span class="text-[13px] font-bold uppercase tracking-[0.08em] text-hh-onhero2">{{ monthLabel }}</span>
+                        <Link
+                            :href="route('budget.index', { month: nextMonth })"
+                            class="grid h-8 w-8 place-items-center rounded-[10px] border border-hh-heroline bg-hh-herofilm text-[13px]"
+                        >
+                            ›
+                        </Link>
+                        <Link v-if="!isCurrentMonth" :href="route('budget.index')" class="ml-1.5 text-[12.5px] text-hh-onhero2">
+                            This month
+                        </Link>
+                        <span class="ml-1.5 text-xs text-hh-onhero2">{{ daysLeftLabel }}</span>
+                    </div>
+
+                    <div class="mt-3.5 text-[15px] text-hh-onhero2">Left to spend this month</div>
+                    <div class="mt-1 text-[52px] font-black leading-none tracking-[-0.04em]">{{ leftToSpend }}</div>
+
+                    <div class="mt-3.5 flex h-3 max-w-[560px] overflow-hidden rounded-lg bg-hh-herofilm">
+                        <span class="bg-hh-coral" :style="{ width: `${spentPct}%` }"></span>
+                        <span class="bg-hh-sun opacity-85" :style="{ width: `${committedPct}%` }"></span>
+                    </div>
+
+                    <div class="mt-3 flex gap-5 text-[13px] text-hh-onhero2">
+                        <span><b class="text-hh-onhero">{{ spentLabel }}</b> spent</span>
+                        <span><b class="text-hh-onhero">{{ budgetedLabel }}</b> budgeted</span>
+                        <span><b class="text-hh-onhero">{{ perDay }}</b> a day to stay on track</span>
+                    </div>
+                </div>
+
+                <div class="relative flex w-full flex-none flex-col gap-2.5 lg:w-[230px]">
+                    <div class="flex-1 rounded-2xl border border-hh-heroline bg-hh-herofilm p-4">
+                        <div class="text-[11px] font-bold uppercase tracking-[0.09em] text-hh-onhero2">Money in</div>
+                        <div class="mt-1.5 text-[22px] font-extrabold tracking-[-0.03em]">{{ incomeTotal }}</div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(360px,1fr)_minmax(460px,1.4fr)]">
+                <!-- Money in -->
+                <section class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                    <div class="mb-3.5 flex items-baseline gap-2.5">
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Money in</h3>
+                        <span class="ml-auto text-[13px] font-bold">{{ incomeTotal }}</span>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <button
+                            v-for="source in income"
+                            :key="source.id"
+                            type="button"
+                            class="flex items-center gap-3 rounded-[14px] bg-hh-sunk p-3 text-left transition hover:-translate-y-px"
+                            @click="openEditIncome(source)"
+                        >
+                            <span
+                                class="grid h-[30px] w-[30px] flex-none place-items-center rounded-[10px] text-[10.5px] font-extrabold text-[#0E1A2B]"
+                                :style="{ background: source.colour }"
+                            >
+                                {{ source.initials }}
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-[13.5px] font-semibold">{{ source.label }}</div>
+                                <div v-if="source.meta" class="mt-0.5 text-[11.5px] text-hh-ink3">{{ source.meta }}</div>
+                            </div>
+                            <span class="font-mono text-[13px]">{{ source.amount }}</span>
+                        </button>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="mt-2.5 min-h-11 rounded-[14px] border border-dashed border-hh-line text-[13px] text-hh-ink3 transition hover:bg-hh-soft hover:text-hh-ink"
+                        @click="openNewIncome"
+                    >
+                        + Add income source
+                    </button>
+                </section>
+
+                <!-- Where it goes -->
+                <section class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                    <div class="mb-2.5 flex items-baseline gap-2.5">
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Where it goes</h3>
+                        <span class="text-xs text-hh-ink3">Budget vs actual</span>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <div
+                            v-for="category in categories"
+                            :key="category.id"
+                            class="flex items-center gap-3.5 rounded-[14px] px-2 py-2.5 transition hover:bg-hh-soft"
+                        >
+                            <span
+                                class="grid h-8 w-8 flex-none place-items-center rounded-[10px] text-sm"
+                                :style="{ background: category.colour }"
+                            >
+                                {{ category.icon }}
+                            </span>
+
+                            <div class="min-w-0 flex-1">
+                                <template v-if="editingCategoryId === category.id">
+                                    <div class="flex items-center gap-2">
+                                        <input v-model="categoryForm.label" type="text" class="hh-input h-8 flex-1 text-[13.5px]" />
+                                        <span class="text-[12.5px] text-hh-ink3">budget £</span>
+                                        <input v-model="categoryForm.budgeted" type="text" class="hh-input h-8 w-[80px] text-[12.5px]" />
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-semibold">{{ category.label }}</span>
+                                        <span class="ml-auto font-mono text-[12.5px]">{{ category.spent }}</span>
+                                        <span class="font-mono text-[12.5px] text-hh-ink3">/ {{ category.budgeted }}</span>
+                                    </div>
+                                    <div class="mt-1.5 h-[7px] overflow-hidden rounded bg-hh-sunk">
+                                        <span
+                                            class="block h-full rounded transition-[width]"
+                                            :style="{ width: `${category.percentageOfBudget}%`, background: category.colour }"
+                                        ></span>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="flex flex-none gap-1">
+                                <button
+                                    v-if="editingCategoryId === category.id"
+                                    type="button"
+                                    title="Done"
+                                    class="grid h-8 w-8 place-items-center rounded-[10px] bg-hh-card text-xs transition hover:bg-hh-line"
+                                    @click="submitCategory(category)"
+                                >
+                                    ✓
+                                </button>
+                                <button
+                                    v-else
+                                    type="button"
+                                    title="Edit category"
+                                    class="grid h-8 w-8 place-items-center rounded-[10px] text-hh-ink3 transition hover:bg-hh-line hover:text-hh-ink"
+                                    @click="openEditCategory(category)"
+                                >
+                                    <Pencil class="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    title="Delete category"
+                                    class="grid h-8 w-8 place-items-center rounded-[10px] text-hh-ink3 transition hover:bg-hh-soft hover:text-hh-coral"
+                                    @click="destroyCategory(category)"
+                                >
+                                    <Trash2 class="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p v-if="categories.length === 0" class="my-2 text-[13px] text-hh-ink3">
+                        No categories yet — add your first one below to start budgeting this month.
+                    </p>
+
+                    <div class="mt-2.5 flex gap-2">
+                        <input
+                            v-model="newCategoryForm.label"
+                            type="text"
+                            class="hh-input flex-1"
+                            placeholder="New category, e.g. Pets"
+                            @keydown.enter="addCategory"
+                        />
+                        <input
+                            v-model="newCategoryForm.budgeted"
+                            type="text"
+                            class="hh-input w-[112px]"
+                            placeholder="£ budget"
+                            @keydown.enter="addCategory"
+                        />
+                        <button type="button" class="hh-btn w-auto bg-hh-coral text-white" @click="addCategory">
+                            <Plus class="h-4 w-4" :stroke-width="2.5" />
+                            Add
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Recent activity -->
+            <section class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                <h3 class="mb-3 text-[15px] font-extrabold tracking-[-0.01em]">Recent activity</h3>
+
+                <div class="flex flex-col gap-0.5">
+                    <div
+                        v-for="transaction in transactions"
+                        :key="transaction.id"
+                        class="flex items-center gap-3 rounded-[12px] px-2 py-2 transition hover:bg-hh-soft"
+                    >
+                        <span class="h-8 w-1 flex-none rounded-sm" :style="{ background: transaction.categoryColour }"></span>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-[13.5px] font-semibold">{{ transaction.label }}</div>
+                            <div class="mt-0.5 flex items-center gap-1.5">
+                                <span class="text-[11.5px] text-hh-ink3">{{ transaction.meta }}</span>
+                                <select
+                                    :value="transaction.categoryId"
+                                    class="h-6 rounded-[7px] border border-hh-line bg-hh-soft px-1.5 text-[11px] font-medium"
+                                    @change="reassignTransaction(transaction, ($event.target as HTMLSelectElement).value)"
+                                >
+                                    <option v-for="option in catOptions" :key="option.id" :value="option.id">{{ option.label }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <span class="font-mono text-[13px]">{{ transaction.amount }}</span>
+                    </div>
+
+                    <p v-if="transactions.length === 0" class="my-2 text-[13px] text-hh-ink3">Nothing logged yet this month.</p>
+                </div>
+
+                <div class="mt-3.5 flex gap-2">
+                    <input
+                        v-model="transactionForm.label"
+                        type="text"
+                        class="hh-input min-w-0 flex-1"
+                        placeholder="Log a spend, e.g. Petrol"
+                    />
+                    <input v-model="transactionForm.amount" type="text" class="hh-input w-[100px]" placeholder="£ amount" />
+                    <select v-model="transactionForm.budget_category_id" class="hh-input w-[150px] cursor-pointer font-semibold">
+                        <option value="" disabled>Category</option>
+                        <option v-for="option in catOptions" :key="option.id" :value="String(option.id)">{{ option.label }}</option>
+                    </select>
+                    <button type="button" class="hh-btn w-auto flex-none bg-hh-coral text-white" @click="addTransaction">
+                        <Plus class="h-4 w-4" :stroke-width="2.5" />
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Add / edit income source -->
+        <Dialog :open="incomeOpen" @update:open="incomeOpen = $event">
+            <DialogContent class="rounded-[22px] border-hh-line bg-hh-card text-hh-ink sm:rounded-[22px]">
+                <DialogHeader>
+                    <DialogTitle class="text-[16px] font-extrabold tracking-tight">{{ incomeDialogTitle }}</DialogTitle>
+                </DialogHeader>
+
+                <form class="flex flex-col gap-4" @submit.prevent="submitIncome">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="income-label" class="hh-label">Name</label>
+                        <input id="income-label" v-model="incomeForm.label" type="text" class="hh-input" required placeholder="Salary" />
+                        <p v-if="incomeForm.errors.label" class="text-[12.5px] text-hh-coral">{{ incomeForm.errors.label }}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="income-meta" class="hh-label">Details</label>
+                            <input id="income-meta" v-model="incomeForm.meta" type="text" class="hh-input" placeholder="Paid 28th" />
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label for="income-amount" class="hh-label">Amount</label>
+                            <input id="income-amount" v-model="incomeForm.amount" type="text" class="hh-input" placeholder="£" />
+                            <p v-if="incomeForm.errors.amount" class="text-[12.5px] text-hh-coral">{{ incomeForm.errors.amount }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="incomeForm.processing">
+                            {{ editingIncome ? 'Save changes' : 'Add income source' }}
+                        </button>
+                        <button type="button" class="hh-btn w-auto bg-hh-soft text-hh-ink" @click="incomeOpen = false">Cancel</button>
+                        <button
+                            v-if="editingIncome"
+                            type="button"
+                            class="hh-btn ml-auto w-auto bg-hh-soft text-hh-coral"
+                            @click="destroyIncome"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
+    </HouseHubLayout>
+</template>

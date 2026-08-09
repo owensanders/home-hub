@@ -16,6 +16,7 @@ export interface ShoppingItem {
     id: number;
     name: string;
     quantity: string | null;
+    /** Raw `ShoppingCategory` enum value, e.g. 'fresh'. */
     category: string;
     done: boolean;
 }
@@ -25,6 +26,8 @@ export interface ShoppingList {
     name: string;
     slug: string;
     colour: string;
+    /** The `Palette` case name, for the colour picker. */
+    colourKey: string;
     remaining: number;
     total: number;
     items: ShoppingItem[];
@@ -165,8 +168,12 @@ export interface CalendarMonth {
 export interface BudgetCategory {
     id: number;
     label: string;
+    icon: string;
     colour: string;
     spent: string;
+    budgeted: string;
+    budgetedPence: number;
+    spentPence: number;
     percentageOfBudget: number;
     shareOfTotal: number;
 }
@@ -177,6 +184,32 @@ export interface BudgetSummary {
     budgeted: string;
     daysLeft: number;
     categories: BudgetCategory[];
+}
+
+export interface BudgetTransaction {
+    id: number;
+    label: string;
+    amount: string;
+    amountPence: number;
+    categoryId: number;
+    categoryLabel: string;
+    categoryColour: string;
+    meta: string;
+}
+
+export interface IncomeSource {
+    id: number;
+    label: string;
+    meta: string | null;
+    colour: string;
+    amount: string;
+    amountPence: number;
+    initials: string;
+}
+
+export interface BudgetCategoryOption {
+    id: number;
+    label: string;
 }
 
 export interface Weather {

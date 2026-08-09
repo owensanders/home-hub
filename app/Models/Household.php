@@ -68,4 +68,16 @@ class Household extends Model
     {
         return $this->hasMany(BudgetCategory::class)->orderBy('position');
     }
+
+    /** @return HasMany<IncomeSource, $this> */
+    public function incomeSources(): HasMany
+    {
+        return $this->hasMany(IncomeSource::class)->orderBy('position');
+    }
+
+    /** @return HasMany<BudgetTransaction, $this> */
+    public function budgetTransactions(): HasMany
+    {
+        return $this->hasMany(BudgetTransaction::class);
+    }
 }

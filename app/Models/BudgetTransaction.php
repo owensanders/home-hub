@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\Palette;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,29 +11,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property int $id
  * @property int $household_id
- * @property string $label
- * @property string|null $icon
- * @property \App\Enums\Palette $colour
- * @property int $budgeted_pence
- * @property int $spent_pence
+ * @property int $budget_category_id
  * @property \Illuminate\Support\Carbon $month
- * @property int $position
+ * @property string $label
+ * @property int $amount_pence
+ * @property BudgetCategory $category
  */
-class BudgetCategory extends Model
+class BudgetTransaction extends Model
 {
-    /** @use HasFactory<\Database\Factories\BudgetCategoryFactory> */
+    /** @use HasFactory<\Database\Factories\BudgetTransactionFactory> */
     use HasFactory;
 
     /** @var list<string> */
-    protected $fillable = ['household_id', 'label', 'icon', 'colour', 'budgeted_pence', 'spent_pence', 'month', 'position'];
+    protected $fillable = ['household_id', 'budget_category_id', 'month', 'label', 'amount_pence'];
 
     protected function casts(): array
     {
         return [
-            'colour' => Palette::class,
-            'budgeted_pence' => 'integer',
-            'spent_pence' => 'integer',
             'month' => 'date',
+            'amount_pence' => 'integer',
         ];
     }
 
@@ -42,5 +37,11 @@ class BudgetCategory extends Model
     public function household(): BelongsTo
     {
         return $this->belongsTo(Household::class);
+    }
+
+    /** @return BelongsTo<BudgetCategory, $this> */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(BudgetCategory::class, 'budget_category_id');
     }
 }

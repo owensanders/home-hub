@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\BudgetTransactionController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChoreController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IncomeSourceController;
 use App\Http\Controllers\MealPlannerController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ShoppingListController;
@@ -49,9 +52,21 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::patch('chores/{chore}/toggle', [ChoreController::class, 'toggle'])->name('chores.toggle');
     Route::patch('chores/{chore}/move', [ChoreController::class, 'move'])->name('chores.move');
 
+    Route::get('budget', [BudgetController::class, 'index'])->name('budget.index');
+    Route::post('budget/categories', [BudgetController::class, 'storeCategory'])->name('budget.categories.store');
+    Route::patch('budget/categories/{category}', [BudgetController::class, 'updateCategory'])->name('budget.categories.update');
+    Route::delete('budget/categories/{category}', [BudgetController::class, 'destroyCategory'])->name('budget.categories.destroy');
+
+    Route::post('budget/transactions', [BudgetTransactionController::class, 'store'])->name('budget.transactions.store');
+    Route::patch('budget/transactions/{transaction}', [BudgetTransactionController::class, 'updateCategory'])->name('budget.transactions.update');
+
+    Route::post('budget/income', [IncomeSourceController::class, 'store'])->name('budget.income.store');
+    Route::patch('budget/income/{income}', [IncomeSourceController::class, 'update'])->name('budget.income.update');
+    Route::delete('budget/income/{income}', [IncomeSourceController::class, 'destroy'])->name('budget.income.destroy');
+
     // Screens the design leaves for a later pass. They render the "not designed
     // yet" empty state rather than 404ing, so the sidebar stays navigable.
-    foreach (['budget', 'house', 'documents', 'maintenance'] as $screen) {
+    foreach (['house', 'documents', 'maintenance'] as $screen) {
         Route::get($screen, fn () => Inertia::render('Placeholder', ['screen' => $screen]))->name("{$screen}.index");
     }
 });

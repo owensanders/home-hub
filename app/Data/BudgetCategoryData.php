@@ -13,8 +13,12 @@ class BudgetCategoryData extends Data
     public function __construct(
         public int $id,
         public string $label,
+        public string $icon,
         public string $colour,
         public string $spent,
+        public string $budgeted,
+        public int $budgetedPence,
+        public int $spentPence,
         public int $percentageOfBudget,
         public int $shareOfTotal,
     ) {}
@@ -28,8 +32,12 @@ class BudgetCategoryData extends Data
         return new self(
             id: $category->id,
             label: $category->label,
+            icon: $category->icon ?? '📌',
             colour: $category->colour->cssVar(),
             spent: Money::format($category->spent_pence),
+            budgeted: Money::format($category->budgeted_pence),
+            budgetedPence: $category->budgeted_pence,
+            spentPence: $category->spent_pence,
             percentageOfBudget: $category->budgeted_pence > 0
                 ? (int) round($category->spent_pence / $category->budgeted_pence * 100)
                 : 0,
