@@ -6,6 +6,7 @@ namespace App\Contracts\Repositories;
 
 use App\Models\CalendarEvent;
 use App\Models\Household;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -27,4 +28,7 @@ interface CalendarEventRepositoryInterface
     public function update(CalendarEvent $event, array $attributes, array $attendeeIds): CalendarEvent;
 
     public function delete(CalendarEvent $event): void;
+
+    /** Deletes every event this member is the sole attendee of. */
+    public function deleteSoleAttendeeEventsFor(User $member): void;
 }

@@ -8,6 +8,7 @@ use App\Contracts\Repositories\ChoreRepositoryInterface;
 use App\Enums\ChoreStatus;
 use App\Models\Chore;
 use App\Models\Household;
+use App\Models\User;
 use Illuminate\Support\Collection;
 
 class ChoreRepository implements ChoreRepositoryInterface
@@ -48,5 +49,10 @@ class ChoreRepository implements ChoreRepositoryInterface
     public function delete(Chore $chore): void
     {
         $chore->delete();
+    }
+
+    public function deleteAssignedTo(User $member): void
+    {
+        $member->assignedChores()->delete();
     }
 }

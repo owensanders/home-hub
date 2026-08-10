@@ -29,6 +29,8 @@ class UserFactory extends Factory
             'initials' => fake()->unique()->lexify('??'),
             'colour' => fake()->randomElement(\App\Enums\Palette::cases()),
             'status_line' => fake()->sentence(3),
+            'role' => \App\Enums\HouseholdRole::Adult,
+            'pending' => false,
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),

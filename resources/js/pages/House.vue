@@ -1,0 +1,198 @@
+<script setup lang="ts">
+import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
+import type { House } from '@/types/househub';
+import { router, useForm } from '@inertiajs/vue3';
+
+const props = defineProps<{ house: House }>();
+
+const invite = useForm({ name: '', email: '', role: 'adult' });
+
+function sendInvite(): void {
+    if (invite.name.trim() === '' || invite.email.trim() === '') {
+        return;
+    }
+
+    invite.post(route('house.invite'), {
+        preserveScroll: true,
+        onSuccess: () => invite.reset(),
+    });
+}
+
+function setRole(memberId: number, role: string): void {
+    router.patch(route('house.members.role', memberId), { role }, { preserveScroll: true });
+}
+
+function removeMember(memberId: number): void {
+    router.delete(route('house.members.destroy', memberId), { preserveScroll: true });
+}
+
+function toggleSetting(key: string): void {
+    router.patch(route('house.settings.update'), { key }, { preserveScroll: true });
+}
+</script>
+
+<template>
+    <HouseHubLayout title="House" subtitle="House information">
+        <div class="flex animate-hh-rise flex-col gap-4">
+            <!-- Hero -->
+            <section
+                class="relative flex flex-col items-start gap-5 overflow-hidden rounded-[22px] p-6 text-hh-onhero sm:flex-row sm:items-center"
+                style="background: linear-gradient(118deg, var(--hh-hero1) 0%, var(--hh-hero2) 100%)"
+            >
+                <div class="absolute -top-24 right-52 h-72 w-72 rounded-full bg-hh-coral opacity-20 blur-3xl"></div>
+
+                <div class="relative min-w-0 flex-1">
+                    <div class="text-[11.5px] font-bold uppercase tracking-[0.09em] text-hh-onhero2">Household</div>
+                    <div class="mt-2 text-4xl font-black leading-[1.05] tracking-[-0.03em]">{{ props.house.houseName }}</div>
+                    <div class="mt-2 text-sm text-hh-onhero2">{{ props.house.houseAddress }} · created {{ props.house.houseCreated }}</div>
+                </div>
+
+                <div class="relative flex gap-2.5">
+                    <div
+                        v-for="stat in props.house.houseStats"
+                        :key="stat.label"
+                        class="w-[132px] rounded-2xl border border-hh-heroline bg-hh-herofilm p-4"
+                    >
+                        <div class="text-[11px] font-bold uppercase tracking-[0.09em] text-hh-onhero2">{{ stat.label }}</div>
+                        <div class="mt-1 text-2xl font-extrabold tracking-[-0.03em]">{{ stat.value }}</div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
+                <!-- People in this home -->
+                <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                    <div class="mb-3.5 flex items-center gap-2.5">
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">People in this home</h3>
+                        <span class="text-xs text-hh-ink3">{{ props.house.memberCount }} members</span>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <div
+                            v-for="member in props.house.members"
+                            :key="member.id"
+                            class="flex items-center gap-3.5 rounded-2xl border border-hh-line p-3.5"
+                            :class="member.pending ? 'bg-hh-sunk' : 'bg-hh-card'"
+                        >
+                            <span
+                                class="grid h-11 w-11 flex-none place-items-center rounded-2xl text-sm font-extrabold text-[#0E1A2B]"
+                                :style="{ background: member.colour }"
+                            >
+                                {{ member.initials }}
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[15px] font-bold">{{ member.name }}</span>
+                                    <span v-if="member.you" class="rounded-lg bg-hh-soft px-2 py-[3px] text-[11px] font-bold text-hh-ink2">You</span>
+                                    <span v-if="member.pending" class="rounded-lg bg-hh-sun px-2 py-[3px] text-[11px] font-bold text-[#0E1A2B]">
+                                        Invite pending
+                                    </span>
+                                </div>
+                                <div class="mt-1 text-[12.5px] text-hh-ink3">{{ member.email }} · {{ member.activity }}</div>
+                            </div>
+                            <select
+                                :value="member.role"
+                                class="h-[38px] w-[132px] rounded-[11px] border border-hh-line bg-hh-sunk px-2.5 text-[13px] font-semibold"
+                                @change="setRole(member.id, ($event.target as HTMLSelectElement).value)"
+                            >
+                                <option v-for="option in props.house.roleOptions" :key="option.value" :value="option.value">
+                                    {{ option.label }}
+                                </option>
+                            </select>
+                            <button
+                                type="button"
+                                title="Remove from household"
+                                class="h-[38px] w-[38px] flex-none rounded-[11px] text-sm text-hh-ink3 transition hover:bg-hh-soft hover:text-hh-coral"
+                                @click="removeMember(member.id)"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 border-t border-hh-line pt-4">
+                        <div class="mb-2.5 text-[13px] font-bold">Invite someone</div>
+                        <form class="flex flex-col gap-2 sm:flex-row" @submit.prevent="sendInvite">
+                            <input
+                                v-model="invite.name"
+                                placeholder="Name"
+                                aria-label="Name"
+                                class="h-[46px] w-full rounded-[13px] border border-hh-line bg-hh-sunk px-3.5 text-sm placeholder:text-hh-ink3 sm:w-[170px]"
+                            />
+                            <input
+                                v-model="invite.email"
+                                type="email"
+                                placeholder="their@email.co.uk"
+                                aria-label="Email"
+                                class="h-[46px] min-w-0 flex-1 rounded-[13px] border border-hh-line bg-hh-sunk px-3.5 text-sm placeholder:text-hh-ink3"
+                            />
+                            <select
+                                v-model="invite.role"
+                                class="h-[46px] w-[132px] rounded-[13px] border border-hh-line bg-hh-sunk px-2.5 text-[13px] font-semibold"
+                            >
+                                <option v-for="option in props.house.roleOptions" :key="option.value" :value="option.value">
+                                    {{ option.label }}
+                                </option>
+                            </select>
+                            <button
+                                type="submit"
+                                :disabled="invite.processing"
+                                class="h-[46px] rounded-[13px] bg-hh-coral px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-50"
+                            >
+                                Send invite
+                            </button>
+                        </form>
+                        <div class="mt-2.5 text-[12.5px] text-hh-ink3">
+                            Invites expire after 7 days. Children get a simplified view with chores and the calendar only.
+                        </div>
+                    </div>
+                </section>
+
+                <div class="flex flex-col gap-4">
+                    <!-- What each role can do -->
+                    <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">What each role can do</h3>
+                        <div class="mt-3 flex flex-col gap-2.5">
+                            <div v-for="role in props.house.roles" :key="role.name" class="rounded-2xl bg-hh-sunk p-3.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="h-2 w-2 rounded-sm" :style="{ background: role.colour }"></span>
+                                    <span class="text-[13.5px] font-bold">{{ role.name }}</span>
+                                    <span class="ml-auto text-[11.5px] text-hh-ink3">{{ role.count }} {{ role.count === 1 ? 'person' : 'people' }}</span>
+                                </div>
+                                <div class="mt-1.5 text-[12.5px] leading-relaxed text-hh-ink2">{{ role.body }}</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Household settings -->
+                    <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                        <h3 class="mb-3 text-[15px] font-extrabold tracking-[-0.01em]">Household settings</h3>
+                        <div class="flex flex-col gap-0.5">
+                            <button
+                                v-for="setting in props.house.settings"
+                                :key="setting.key"
+                                type="button"
+                                class="flex min-h-[52px] w-full items-center gap-3 rounded-xl px-2 text-left transition-colors hover:bg-hh-soft"
+                                @click="toggleSetting(setting.key)"
+                            >
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-[13.5px] font-semibold">{{ setting.title }}</div>
+                                    <div class="mt-0.5 text-[11.5px] text-hh-ink3">{{ setting.body }}</div>
+                                </div>
+                                <span
+                                    class="h-[26px] w-11 flex-none rounded-full p-[3px] transition-colors"
+                                    :style="{ background: setting.enabled ? 'var(--hh-mint)' : 'var(--hh-line)' }"
+                                >
+                                    <span
+                                        class="block h-5 w-5 rounded-full bg-white transition-transform"
+                                        :style="{ transform: setting.enabled ? 'translateX(18px)' : 'translateX(0)' }"
+                                    ></span>
+                                </span>
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </HouseHubLayout>
+</template>

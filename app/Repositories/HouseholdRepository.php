@@ -37,4 +37,12 @@ class HouseholdRepository implements HouseholdRepositoryInterface
             ->whereDate('month', $month->startOfMonth()->toDateString())
             ->get();
     }
+
+    /** @param  array<string, bool>  $settings */
+    public function updateSettings(Household $household, array $settings): Household
+    {
+        $household->update(['settings' => $settings]);
+
+        return $household;
+    }
 }

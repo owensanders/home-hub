@@ -12,7 +12,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property string $name
  * @property string|null $location
+ * @property string|null $address
  * @property int $streak_days
+ * @property array<string, bool>|null $settings
  */
 class Household extends Model
 {
@@ -20,11 +22,11 @@ class Household extends Model
     use HasFactory;
 
     /** @var list<string> */
-    protected $fillable = ['name', 'location', 'streak_days'];
+    protected $fillable = ['name', 'location', 'address', 'streak_days', 'settings'];
 
     protected function casts(): array
     {
-        return ['streak_days' => 'integer'];
+        return ['streak_days' => 'integer', 'settings' => 'array'];
     }
 
     /** @return HasMany<User, $this> */
@@ -73,11 +75,5 @@ class Household extends Model
     public function incomeSources(): HasMany
     {
         return $this->hasMany(IncomeSource::class)->orderBy('position');
-    }
-
-    /** @return HasMany<BudgetTransaction, $this> */
-    public function budgetTransactions(): HasMany
-    {
-        return $this->hasMany(BudgetTransaction::class);
     }
 }

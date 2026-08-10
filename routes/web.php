@@ -6,6 +6,7 @@ use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChoreController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HouseController;
 use App\Http\Controllers\IncomeSourceController;
 use App\Http\Controllers\MealPlannerController;
 use App\Http\Controllers\RecipeController;
@@ -60,9 +61,15 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::patch('budget/income/{income}', [IncomeSourceController::class, 'update'])->name('budget.income.update');
     Route::delete('budget/income/{income}', [IncomeSourceController::class, 'destroy'])->name('budget.income.destroy');
 
+    Route::get('house', [HouseController::class, 'index'])->name('house.index');
+    Route::post('house/invite', [HouseController::class, 'invite'])->name('house.invite');
+    Route::patch('house/members/{member}/role', [HouseController::class, 'updateRole'])->name('house.members.role');
+    Route::delete('house/members/{member}', [HouseController::class, 'destroy'])->name('house.members.destroy');
+    Route::patch('house/settings', [HouseController::class, 'toggleSetting'])->name('house.settings.update');
+
     // Screens the design leaves for a later pass. They render the "not designed
     // yet" empty state rather than 404ing, so the sidebar stays navigable.
-    foreach (['house', 'documents'] as $screen) {
+    foreach (['documents'] as $screen) {
         Route::get($screen, fn () => Inertia::render('Placeholder', ['screen' => $screen]))->name("{$screen}.index");
     }
 });

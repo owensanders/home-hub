@@ -7,6 +7,7 @@ namespace App\Repositories;
 use App\Contracts\Repositories\CalendarEventRepositoryInterface;
 use App\Models\CalendarEvent;
 use App\Models\Household;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -50,5 +51,12 @@ class CalendarEventRepository implements CalendarEventRepositoryInterface
     public function delete(CalendarEvent $event): void
     {
         $event->delete();
+    }
+
+    public function deleteSoleAttendeeEventsFor(User $member): void
+    {
+        $member->attendingEvents()->with('attendees')->get()
+            ->filter(fn (CalendarEvent $event) => $event->attendees->count() === 1)
+            ->each(fn (CalendarEvent $event) => $event->delete());
     }
 }

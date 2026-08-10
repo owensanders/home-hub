@@ -20,4 +20,7 @@ interface HouseholdRepositoryInterface
 
     /** @return Collection<int, BudgetCategory> */
     public function budgetFor(Household $household, CarbonImmutable $month): Collection;
+
+    /** @param  array<string, bool>  $settings */
+    public function updateSettings(Household $household, array $settings): Household;
 }

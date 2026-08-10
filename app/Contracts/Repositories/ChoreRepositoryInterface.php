@@ -7,6 +7,7 @@ namespace App\Contracts\Repositories;
 use App\Enums\ChoreStatus;
 use App\Models\Chore;
 use App\Models\Household;
+use App\Models\User;
 use Illuminate\Support\Collection;
 
 interface ChoreRepositoryInterface
@@ -23,4 +24,7 @@ interface ChoreRepositoryInterface
     public function update(Chore $chore, array $attributes): Chore;
 
     public function delete(Chore $chore): void;
+
+    /** Deletes every chore currently assigned to this member. */
+    public function deleteAssignedTo(User $member): void;
 }
