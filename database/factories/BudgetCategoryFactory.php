@@ -24,8 +24,15 @@ class BudgetCategoryFactory extends Factory
             'icon' => '📌',
             'colour' => Palette::Coral,
             'budgeted_pence' => 50000,
+            'is_recurring' => false,
             'month' => CarbonImmutable::now()->startOfMonth(),
             'position' => 0,
         ];
+    }
+
+    /** @return static */
+    public function recurring(): self
+    {
+        return $this->state(['is_recurring' => true]);
     }
 }

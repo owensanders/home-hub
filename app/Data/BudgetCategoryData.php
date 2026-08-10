@@ -18,6 +18,7 @@ class BudgetCategoryData extends Data
         public string $budgeted,
         public int $budgetedPence,
         public int $shareOfTotal,
+        public bool $isRecurring,
     ) {}
 
     /**
@@ -36,6 +37,7 @@ class BudgetCategoryData extends Data
             shareOfTotal: $totalBudgetPence > 0
                 ? (int) round($category->budgeted_pence / $totalBudgetPence * 100)
                 : 0,
+            isRecurring: $category->is_recurring,
         );
     }
 }

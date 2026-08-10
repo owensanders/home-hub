@@ -23,6 +23,9 @@ interface BudgetRepositoryInterface
 
     public function deleteCategory(BudgetCategory $category): void;
 
+    /** @return Collection<int, BudgetCategory> the nearest earlier month's recurring categories, or empty if none */
+    public function recurringCategoriesBefore(Household $household, CarbonImmutable $month): Collection;
+
     /** @return Collection<int, IncomeSource> */
     public function incomeSourcesFor(Household $household): Collection;
 

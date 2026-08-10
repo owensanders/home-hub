@@ -52,6 +52,24 @@ class BudgetRepository implements BudgetRepositoryInterface
         $category->delete();
     }
 
+    /** @return Collection<int, BudgetCategory> */
+    public function recurringCategoriesBefore(Household $household, CarbonImmutable $month): Collection
+    {
+        $latestMonth = $household->budgetCategories()
+            ->where('is_recurring', true)
+            ->whereDate('month', '<', $month->startOfMonth()->toDateString())
+            ->max('month');
+
+        if ($latestMonth === null) {
+            return collect();
+        }
+
+        return $household->budgetCategories()
+            ->where('is_recurring', true)
+            ->whereDate('month', $latestMonth)
+            ->get();
+    }
+
     /** @return Collection<int, IncomeSource> */
     public function incomeSourcesFor(Household $household): Collection
     {

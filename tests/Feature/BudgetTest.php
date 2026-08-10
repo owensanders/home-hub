@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\BudgetCategory;
 use App\Models\IncomeSource;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -51,6 +52,22 @@ class BudgetTest extends TestCase
             'household_id' => $user->household_id,
             'label' => 'Pets',
             'budgeted_pence' => 7500,
+        ]);
+    }
+
+    #[Test]
+    public function itCreatesARecurringCategory(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/budget/categories', ['label' => 'Rent', 'budgeted' => '900', 'is_recurring' => '1'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('budget_categories', [
+            'household_id' => $user->household_id,
+            'label' => 'Rent',
+            'is_recurring' => true,
         ]);
     }
 
@@ -183,5 +200,142 @@ class BudgetTest extends TestCase
             ->assertNotFound();
 
         $this->assertDatabaseHas('income_sources', ['id' => $income->id]);
+    }
+
+    #[Test]
+    public function itCarriesForwardRecurringCategoriesIntoAnEmptyMonth(): void
+    {
+        $user = User::factory()->create();
+        $thisMonth = CarbonImmutable::now()->startOfMonth();
+        $nextMonth = $thisMonth->addMonth();
+
+        BudgetCategory::factory()->recurring()->create([
+            'household_id' => $user->household_id,
+            'label' => 'Rent',
+            'budgeted_pence' => 90000,
+            'month' => $thisMonth,
+        ]);
+        BudgetCategory::factory()->create([
+            'household_id' => $user->household_id,
+            'label' => 'One-off holiday',
+            'month' => $thisMonth,
+        ]);
+
+        $this->actingAs($user)->get('/budget?month='.$nextMonth->format('Y-m'))->assertOk();
+
+        $this->assertDatabaseHas('budget_categories', [
+            'household_id' => $user->household_id,
+            'label' => 'Rent',
+            'budgeted_pence' => 90000,
+            'is_recurring' => true,
+            'month' => $nextMonth->toDateString(),
+        ]);
+        $this->assertDatabaseMissing('budget_categories', [
+            'household_id' => $user->household_id,
+            'label' => 'One-off holiday',
+            'month' => $nextMonth->toDateString(),
+        ]);
+    }
+
+    #[Test]
+    public function itDoesNotDuplicateCarriedCategoriesOnRepeatedVisits(): void
+    {
+        $user = User::factory()->create();
+        $thisMonth = CarbonImmutable::now()->startOfMonth();
+        $nextMonth = $thisMonth->addMonth();
+
+        BudgetCategory::factory()->recurring()->create([
+            'household_id' => $user->household_id,
+            'label' => 'Rent',
+            'month' => $thisMonth,
+        ]);
+
+        $this->actingAs($user)->get('/budget?month='.$nextMonth->format('Y-m'))->assertOk();
+        $this->actingAs($user)->get('/budget?month='.$nextMonth->format('Y-m'))->assertOk();
+
+        $this->assertDatabaseCount('budget_categories', 2);
+    }
+
+    #[Test]
+    public function itCarriesForwardAcrossAGapMonth(): void
+    {
+        $user = User::factory()->create();
+        $thisMonth = CarbonImmutable::now()->startOfMonth();
+        $twoMonthsAhead = $thisMonth->addMonths(2);
+
+        BudgetCategory::factory()->recurring()->create([
+            'household_id' => $user->household_id,
+            'label' => 'Rent',
+            'budgeted_pence' => 90000,
+            'month' => $thisMonth,
+        ]);
+
+        // The month in between is never visited, so it's genuinely empty.
+        $this->actingAs($user)->get('/budget?month='.$twoMonthsAhead->format('Y-m'))->assertOk();
+
+        $this->assertDatabaseHas('budget_categories', [
+            'household_id' => $user->household_id,
+            'label' => 'Rent',
+            'month' => $twoMonthsAhead->toDateString(),
+        ]);
+    }
+
+    #[Test]
+    public function itKeepsCarriedForwardCategoriesIndependentlyEditable(): void
+    {
+        $user = User::factory()->create();
+        $thisMonth = CarbonImmutable::now()->startOfMonth();
+        $nextMonth = $thisMonth->addMonth();
+
+        BudgetCategory::factory()->recurring()->create([
+            'household_id' => $user->household_id,
+            'label' => 'Rent',
+            'budgeted_pence' => 90000,
+            'month' => $thisMonth,
+        ]);
+
+        $this->actingAs($user)->get('/budget?month='.$nextMonth->format('Y-m'))->assertOk();
+
+        $carried = BudgetCategory::query()->whereDate('month', $nextMonth->toDateString())->firstOrFail();
+
+        $this->actingAs($user)
+            ->patch("/budget/categories/{$carried->id}", ['label' => 'Rent', 'budgeted' => '950'])
+            ->assertRedirect();
+
+        $this->assertSame(95000, $carried->refresh()->budgeted_pence);
+        $this->assertDatabaseHas('budget_categories', [
+            'household_id' => $user->household_id,
+            'month' => $thisMonth->toDateString(),
+            'budgeted_pence' => 90000,
+        ]);
+    }
+
+    #[Test]
+    public function itIncludesThreeMonthsOfHistory(): void
+    {
+        $user = User::factory()->create();
+        $thisMonth = CarbonImmutable::now()->startOfMonth();
+
+        BudgetCategory::factory()->create([
+            'household_id' => $user->household_id,
+            'budgeted_pence' => 50000,
+            'month' => $thisMonth,
+        ]);
+        BudgetCategory::factory()->create([
+            'household_id' => $user->household_id,
+            'budgeted_pence' => 30000,
+            'month' => $thisMonth->subMonth(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/budget')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Budget')
+                ->count('history', 3)
+                ->where('history.2.totalPence', 50000)
+                ->where('history.1.totalPence', 30000)
+                ->where('history.0.totalPence', 0)
+            );
     }
 }

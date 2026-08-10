@@ -6,6 +6,7 @@ namespace App\UseCases\Budget;
 
 use App\Contracts\Repositories\BudgetRepositoryInterface;
 use App\Data\BudgetCategoryData;
+use App\Data\BudgetMonthSummaryData;
 use App\Data\IncomeSourceData;
 use App\Models\BudgetCategory;
 use App\Models\Household;
@@ -15,7 +16,12 @@ use Carbon\CarbonImmutable;
 
 class GetBudgetScreenUseCase
 {
-    public function __construct(private readonly BudgetRepositoryInterface $budget) {}
+    private const HISTORY_MONTHS = 3;
+
+    public function __construct(
+        private readonly BudgetRepositoryInterface $budget,
+        private readonly CarryForwardRecurringCategoriesUseCase $carryForward,
+    ) {}
 
     /**
      * @return array{
@@ -23,13 +29,15 @@ class GetBudgetScreenUseCase
      *     daysLeftLabel: string, leftToSpend: string, budgetedLabel: string, perDay: string,
      *     budgetedPence: int, incomeTotalPence: int,
      *     income: list<IncomeSourceData>, incomeTotal: string,
-     *     categories: list<BudgetCategoryData>,
+     *     categories: list<BudgetCategoryData>, history: list<BudgetMonthSummaryData>,
      * }
      */
     public function execute(Household $household, CarbonImmutable $month): array
     {
         $today = CarbonImmutable::today();
         $first = $month->startOfMonth();
+
+        $this->carryForward->execute($household, $first);
 
         $categories = $this->budget->categoriesFor($household, $first);
         $income = $this->budget->incomeSourcesFor($household);
@@ -56,6 +64,27 @@ class GetBudgetScreenUseCase
             'income' => $income->map(IncomeSourceData::fromModel(...))->values()->all(),
             'incomeTotal' => Money::format($incomeTotal),
             'categories' => $categories->map(fn (BudgetCategory $category) => BudgetCategoryData::fromModel($category, $budgeted))->values()->all(),
+            'history' => $this->history($household, $first),
         ];
+    }
+
+    /** @return list<BudgetMonthSummaryData> */
+    private function history(Household $household, CarbonImmutable $first): array
+    {
+        $months = [];
+
+        for ($i = self::HISTORY_MONTHS - 1; $i >= 0; $i--) {
+            $cursor = $first->subMonths($i);
+            $total = (int) $this->budget->categoriesFor($household, $cursor)->sum('budgeted_pence');
+
+            $months[] = new BudgetMonthSummaryData(
+                month: $cursor->format('Y-m'),
+                monthLabel: $cursor->format('M'),
+                total: Money::format($total),
+                totalPence: $total,
+            );
+        }
+
+        return $months;
     }
 }

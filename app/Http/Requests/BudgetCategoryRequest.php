@@ -15,6 +15,7 @@ class BudgetCategoryRequest extends FormRequest
             'label' => ['required', 'string', 'max:60'],
             'icon' => ['nullable', 'string', 'max:8'],
             'budgeted' => ['required', 'numeric', 'min:0'],
+            'is_recurring' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -37,6 +38,7 @@ class BudgetCategoryRequest extends FormRequest
             'label' => trim((string) $this->validated('label')),
             'icon' => $this->validated('icon'),
             'budgeted_pence' => (int) round(((float) $this->validated('budgeted')) * 100),
+            'is_recurring' => $this->boolean('is_recurring'),
         ];
     }
 }

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
-import type { BudgetCategory, IncomeSource } from '@/types/househub';
+import { donut } from '@/lib/househub';
+import type { BudgetCategory, BudgetMonthSummary, IncomeSource } from '@/types/househub';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { Pencil, Plus, Repeat, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
@@ -20,6 +21,7 @@ const props = defineProps<{
     income: IncomeSource[];
     incomeTotal: string;
     categories: BudgetCategory[];
+    history: BudgetMonthSummary[];
 }>();
 
 function pct(part: number, whole: number): number {
@@ -28,6 +30,16 @@ function pct(part: number, whole: number): number {
 
 const assignedPct = computed(() => pct(props.budgetedPence, props.incomeTotalPence));
 const isCurrentMonth = computed(() => props.month === new Date().toISOString().slice(0, 7));
+
+// Income vs. expenses donut
+const incomePct = computed(() => pct(props.incomeTotalPence, props.incomeTotalPence + props.budgetedPence));
+const incomeExpenseDonut = computed(() => donut(incomePct.value, 'var(--hh-mint)', 'var(--hh-coral)'));
+
+// Last 3 months bar chart
+const maxHistoryPence = computed(() => Math.max(1, ...props.history.map((entry) => entry.totalPence)));
+function historyBarHeight(entry: BudgetMonthSummary): number {
+    return Math.round((entry.totalPence / maxHistoryPence.value) * 100);
+}
 
 // Income sources — add / edit / delete
 const incomeOpen = ref(false);
@@ -79,12 +91,16 @@ function destroyIncome(): void {
 
 // Categories — inline edit / delete, plus an add form at the bottom of the card
 const editingCategoryId = ref<number | null>(null);
-const categoryForm = useForm({ label: '', budgeted: '' });
+const categoryForm = useForm({ label: '', budgeted: '', is_recurring: false as boolean });
 
 function openEditCategory(category: BudgetCategory): void {
     editingCategoryId.value = category.id;
     categoryForm.clearErrors();
-    categoryForm.defaults({ label: category.label, budgeted: (category.budgetedPence / 100).toString() });
+    categoryForm.defaults({
+        label: category.label,
+        budgeted: (category.budgetedPence / 100).toString(),
+        is_recurring: category.isRecurring,
+    });
     categoryForm.reset();
 }
 
@@ -103,7 +119,7 @@ function destroyCategory(category: BudgetCategory): void {
     router.delete(route('budget.categories.destroy', { category: category.id }), { preserveScroll: true });
 }
 
-const newCategoryForm = useForm({ label: '', budgeted: '' });
+const newCategoryForm = useForm({ label: '', budgeted: '', is_recurring: false });
 
 function addCategory(): void {
     if (newCategoryForm.label.trim() === '') {
@@ -168,6 +184,52 @@ function addCategory(): void {
                     </div>
                 </div>
             </section>
+
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <!-- Income vs. expenses -->
+                <section class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                    <h3 class="mb-3.5 text-[15px] font-extrabold tracking-[-0.01em]">Income vs. expenses</h3>
+
+                    <div class="flex items-center gap-5">
+                        <div class="grid h-[120px] w-[120px] flex-none place-items-center rounded-full" :style="{ background: incomeExpenseDonut }">
+                            <div class="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full bg-hh-card text-center">
+                                <span class="text-[11px] text-hh-ink3">Left over</span>
+                                <span class="text-[17px] font-extrabold tracking-[-0.02em]">{{ leftToSpend }}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-1 flex-col gap-2.5">
+                            <div class="flex items-center gap-2.5">
+                                <span class="h-2.5 w-2.5 flex-none rounded-[3px]" style="background: var(--hh-mint)"></span>
+                                <span class="flex-1 text-[13px] font-medium">Income</span>
+                                <span class="font-mono text-[13px]">{{ incomeTotal }}</span>
+                            </div>
+                            <div class="flex items-center gap-2.5">
+                                <span class="h-2.5 w-2.5 flex-none rounded-[3px]" style="background: var(--hh-coral)"></span>
+                                <span class="flex-1 text-[13px] font-medium">Assigned</span>
+                                <span class="font-mono text-[13px]">{{ budgetedLabel }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Last 3 months -->
+                <section class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                    <h3 class="mb-3.5 text-[15px] font-extrabold tracking-[-0.01em]">Last 3 months</h3>
+
+                    <div class="flex h-[120px] flex-1 items-end justify-around gap-4">
+                        <div v-for="entry in history" :key="entry.month" class="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+                            <span class="font-mono text-[12px] text-hh-ink3">{{ entry.total }}</span>
+                            <div
+                                class="w-full max-w-10 rounded-t-md transition-[height]"
+                                :class="entry.month === month ? 'bg-hh-coral' : 'bg-hh-sunk'"
+                                :style="{ height: `${historyBarHeight(entry)}%` }"
+                            ></div>
+                            <span class="text-[12px] font-semibold text-hh-ink3">{{ entry.monthLabel }}</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
 
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(360px,1fr)_minmax(460px,1.4fr)]">
                 <!-- Money in -->
@@ -234,10 +296,15 @@ function addCategory(): void {
                                         <span class="text-[12.5px] text-hh-ink3">budget £</span>
                                         <input v-model="categoryForm.budgeted" type="text" class="hh-input h-8 w-[80px] text-[12.5px]" />
                                     </div>
+                                    <label class="mt-1.5 flex items-center gap-1.5 text-[12px] text-hh-ink3">
+                                        <input v-model="categoryForm.is_recurring" type="checkbox" class="h-3.5 w-3.5" />
+                                        Repeats every month
+                                    </label>
                                 </template>
                                 <template v-else>
                                     <div class="flex items-center gap-2">
                                         <span class="text-sm font-semibold">{{ category.label }}</span>
+                                        <Repeat v-if="category.isRecurring" title="Repeats every month" class="h-3 w-3 flex-none text-hh-ink3" />
                                         <span class="ml-auto font-mono text-[12.5px]">{{ category.budgeted }}</span>
                                     </div>
                                     <div class="mt-1.5 h-[7px] overflow-hidden rounded bg-hh-sunk">
@@ -304,6 +371,10 @@ function addCategory(): void {
                             Add
                         </button>
                     </div>
+                    <label class="mt-2 flex items-center gap-1.5 text-[12px] text-hh-ink3">
+                        <input v-model="newCategoryForm.is_recurring" type="checkbox" class="h-3.5 w-3.5" />
+                        Repeat this every month
+                    </label>
                 </section>
             </div>
         </div>
