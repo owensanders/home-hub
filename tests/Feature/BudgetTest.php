@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\BudgetCategory;
-use App\Models\BudgetTransaction;
 use App\Models\IncomeSource;
 use App\Models\User;
-use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -18,21 +16,15 @@ class BudgetTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function itRendersCategoriesIncomeAndTransactionsForTheMonth(): void
+    public function itRendersCategoriesAndIncomeForTheMonth(): void
     {
         $user = User::factory()->create();
-        $category = BudgetCategory::factory()->create([
+        BudgetCategory::factory()->create([
             'household_id' => $user->household_id,
             'label' => 'Food & shopping',
             'budgeted_pence' => 50000,
-            'spent_pence' => 12000,
         ]);
         IncomeSource::factory()->create(['household_id' => $user->household_id, 'amount_pence' => 200000]);
-        BudgetTransaction::factory()->create([
-            'household_id' => $user->household_id,
-            'budget_category_id' => $category->id,
-            'month' => CarbonImmutable::now()->startOfMonth(),
-        ]);
 
         $this->actingAs($user)
             ->get('/budget')
@@ -41,7 +33,6 @@ class BudgetTest extends TestCase
                 ->component('Budget')
                 ->count('categories', 1)
                 ->count('income', 1)
-                ->count('transactions', 1)
                 ->where('categories.0.label', 'Food & shopping')
             );
     }
@@ -94,14 +85,10 @@ class BudgetTest extends TestCase
     }
 
     #[Test]
-    public function itDeletesACategoryAndCascadesItsTransactions(): void
+    public function itDeletesACategory(): void
     {
         $user = User::factory()->create();
         $category = BudgetCategory::factory()->create(['household_id' => $user->household_id, 'label' => 'Subscriptions']);
-        $transaction = BudgetTransaction::factory()->create([
-            'household_id' => $user->household_id,
-            'budget_category_id' => $category->id,
-        ]);
 
         $this->actingAs($user)
             ->delete("/budget/categories/{$category->id}")
@@ -109,7 +96,6 @@ class BudgetTest extends TestCase
             ->assertSessionHas('toast', 'Subscriptions removed');
 
         $this->assertDatabaseMissing('budget_categories', ['id' => $category->id]);
-        $this->assertDatabaseMissing('budget_transactions', ['id' => $transaction->id]);
     }
 
     #[Test]
@@ -124,78 +110,6 @@ class BudgetTest extends TestCase
             ->assertNotFound();
 
         $this->assertDatabaseHas('budget_categories', ['id' => $category->id]);
-    }
-
-    #[Test]
-    public function itLogsASpendAndIncrementsTheCategorysSpentTotal(): void
-    {
-        $user = User::factory()->create();
-        $category = BudgetCategory::factory()->create(['household_id' => $user->household_id, 'spent_pence' => 1000]);
-
-        $this->actingAs($user)
-            ->post('/budget/transactions', [
-                'budget_category_id' => $category->id,
-                'label' => 'Petrol',
-                'amount' => '48.20',
-            ])
-            ->assertRedirect()
-            ->assertSessionHas('toast', 'Logged Petrol');
-
-        $this->assertDatabaseHas('budget_transactions', [
-            'household_id' => $user->household_id,
-            'budget_category_id' => $category->id,
-            'label' => 'Petrol',
-            'amount_pence' => 4820,
-        ]);
-        $this->assertSame(5820, $category->refresh()->spent_pence);
-    }
-
-    #[Test]
-    public function itRefusesASpendAgainstAnotherHouseholdsCategory(): void
-    {
-        $user = User::factory()->create();
-        $stranger = User::factory()->create();
-        $category = BudgetCategory::factory()->create(['household_id' => $stranger->household_id]);
-
-        $this->actingAs($user)
-            ->post('/budget/transactions', ['budget_category_id' => $category->id, 'label' => 'Petrol', 'amount' => '10'])
-            ->assertSessionHasErrors('budget_category_id');
-
-        $this->assertDatabaseCount('budget_transactions', 0);
-    }
-
-    #[Test]
-    public function itReassignsATransactionAndMovesBothCategoryTotals(): void
-    {
-        $user = User::factory()->create();
-        $from = BudgetCategory::factory()->create(['household_id' => $user->household_id, 'spent_pence' => 5000]);
-        $to = BudgetCategory::factory()->create(['household_id' => $user->household_id, 'spent_pence' => 2000]);
-        $transaction = BudgetTransaction::factory()->create([
-            'household_id' => $user->household_id,
-            'budget_category_id' => $from->id,
-            'amount_pence' => 3000,
-        ]);
-
-        $this->actingAs($user)
-            ->patch("/budget/transactions/{$transaction->id}", ['budget_category_id' => $to->id])
-            ->assertRedirect();
-
-        $this->assertSame($to->id, $transaction->refresh()->budget_category_id);
-        $this->assertSame(2000, $from->refresh()->spent_pence);
-        $this->assertSame(5000, $to->refresh()->spent_pence);
-    }
-
-    #[Test]
-    public function itDoesNotReassignAnotherHouseholdsTransaction(): void
-    {
-        $user = User::factory()->create();
-        $stranger = User::factory()->create();
-        $category = BudgetCategory::factory()->create(['household_id' => $user->household_id]);
-        $transaction = BudgetTransaction::factory()->create(['household_id' => $stranger->household_id]);
-
-        $this->actingAs($user)
-            ->patch("/budget/transactions/{$transaction->id}", ['budget_category_id' => $category->id])
-            ->assertNotFound();
     }
 
     #[Test]

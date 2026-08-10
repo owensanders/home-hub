@@ -6,12 +6,10 @@ namespace App\Repositories;
 
 use App\Contracts\Repositories\BudgetRepositoryInterface;
 use App\Models\BudgetCategory;
-use App\Models\BudgetTransaction;
 use App\Models\Household;
 use App\Models\IncomeSource;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class BudgetRepository implements BudgetRepositoryInterface
 {
@@ -52,44 +50,6 @@ class BudgetRepository implements BudgetRepositoryInterface
     public function deleteCategory(BudgetCategory $category): void
     {
         $category->delete();
-    }
-
-    /** @return Collection<int, BudgetTransaction> */
-    public function transactionsFor(Household $household, CarbonImmutable $month): Collection
-    {
-        return $household->budgetTransactions()
-            ->with('category')
-            ->whereDate('month', $month->startOfMonth()->toDateString())
-            ->latest()
-            ->get();
-    }
-
-    /** @param array<string, mixed> $attributes */
-    public function createTransaction(BudgetCategory $category, array $attributes): BudgetTransaction
-    {
-        return DB::transaction(function () use ($category, $attributes) {
-            $transaction = $category->household->budgetTransactions()->create([
-                ...$attributes,
-                'budget_category_id' => $category->id,
-                'month' => $category->month,
-            ]);
-
-            $category->increment('spent_pence', $attributes['amount_pence']);
-
-            return $transaction->refresh()->load('category');
-        });
-    }
-
-    public function moveTransaction(BudgetTransaction $transaction, BudgetCategory $newCategory): BudgetTransaction
-    {
-        return DB::transaction(function () use ($transaction, $newCategory) {
-            $transaction->category->decrement('spent_pence', $transaction->amount_pence);
-            $newCategory->increment('spent_pence', $transaction->amount_pence);
-
-            $transaction->update(['budget_category_id' => $newCategory->id]);
-
-            return $transaction->refresh()->load('category');
-        });
     }
 
     /** @return Collection<int, IncomeSource> */

@@ -16,7 +16,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $icon
  * @property \App\Enums\Palette $colour
  * @property int $budgeted_pence
- * @property int $spent_pence
  * @property \Illuminate\Support\Carbon $month
  * @property int $position
  */
@@ -26,14 +25,13 @@ class BudgetCategory extends Model
     use HasFactory;
 
     /** @var list<string> */
-    protected $fillable = ['household_id', 'label', 'icon', 'colour', 'budgeted_pence', 'spent_pence', 'month', 'position'];
+    protected $fillable = ['household_id', 'label', 'icon', 'colour', 'budgeted_pence', 'month', 'position'];
 
     protected function casts(): array
     {
         return [
             'colour' => Palette::class,
             'budgeted_pence' => 'integer',
-            'spent_pence' => 'integer',
             'month' => 'date',
         ];
     }

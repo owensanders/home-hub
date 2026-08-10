@@ -170,31 +170,24 @@ export interface BudgetCategory {
     label: string;
     icon: string;
     colour: string;
-    spent: string;
     budgeted: string;
     budgetedPence: number;
-    spentPence: number;
-    percentageOfBudget: number;
     shareOfTotal: number;
+    isRecurring: boolean;
+}
+
+export interface BudgetMonthSummary {
+    month: string;
+    monthLabel: string;
+    total: string;
+    totalPence: number;
 }
 
 export interface BudgetSummary {
     monthLabel: string;
-    spent: string;
     budgeted: string;
     daysLeft: number;
     categories: BudgetCategory[];
-}
-
-export interface BudgetTransaction {
-    id: number;
-    label: string;
-    amount: string;
-    amountPence: number;
-    categoryId: number;
-    categoryLabel: string;
-    categoryColour: string;
-    meta: string;
 }
 
 export interface IncomeSource {
@@ -207,15 +200,59 @@ export interface IncomeSource {
     initials: string;
 }
 
-export interface BudgetCategoryOption {
-    id: number;
-    label: string;
-}
-
 export interface Weather {
     location: string;
     temperature: string;
     summary: string;
+}
+
+export interface HouseStat {
+    label: string;
+    value: string;
+}
+
+export interface RoleOption {
+    value: string;
+    label: string;
+}
+
+export interface HouseMember {
+    id: number;
+    name: string;
+    initials: string;
+    colour: string;
+    email: string;
+    role: string;
+    roleLabel: string;
+    activity: string;
+    you: boolean;
+    pending: boolean;
+}
+
+export interface HouseRole {
+    name: string;
+    colour: string;
+    body: string;
+    count: number;
+}
+
+export interface HouseSetting {
+    key: string;
+    title: string;
+    body: string;
+    enabled: boolean;
+}
+
+export interface House {
+    houseName: string;
+    houseAddress: string;
+    houseCreated: string;
+    houseStats: HouseStat[];
+    memberCount: number;
+    roleOptions: RoleOption[];
+    members: HouseMember[];
+    roles: HouseRole[];
+    settings: HouseSetting[];
 }
 
 export interface Dashboard {

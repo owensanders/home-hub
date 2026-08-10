@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Contracts\Repositories;
 
 use App\Models\BudgetCategory;
-use App\Models\BudgetTransaction;
 use App\Models\Household;
 use App\Models\IncomeSource;
 use Carbon\CarbonImmutable;
@@ -23,14 +22,6 @@ interface BudgetRepositoryInterface
     public function updateCategory(BudgetCategory $category, array $attributes): BudgetCategory;
 
     public function deleteCategory(BudgetCategory $category): void;
-
-    /** @return Collection<int, BudgetTransaction> transactions with their category eager-loaded */
-    public function transactionsFor(Household $household, CarbonImmutable $month): Collection;
-
-    /** @param array<string, mixed> $attributes */
-    public function createTransaction(BudgetCategory $category, array $attributes): BudgetTransaction;
-
-    public function moveTransaction(BudgetTransaction $transaction, BudgetCategory $newCategory): BudgetTransaction;
 
     /** @return Collection<int, IncomeSource> */
     public function incomeSourcesFor(Household $household): Collection;

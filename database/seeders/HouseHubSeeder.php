@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Enums\ChoreStatus;
+use App\Enums\HouseholdRole;
 use App\Enums\MealSlot;
 use App\Enums\Palette;
 use App\Enums\ShoppingCategory;
@@ -27,6 +28,7 @@ class HouseHubSeeder extends Seeder
         $household = Household::create([
             'name' => 'The Parkers',
             'location' => 'Bristol',
+            'address' => '14 Elmgrove Road, Bristol',
             'streak_days' => 12,
         ]);
 
@@ -42,26 +44,39 @@ class HouseHubSeeder extends Seeder
     private function seedMembers(Household $household): array
     {
         $people = [
-            ['sarah', 'Sarah Parker', 'SP', Palette::Mint, 'WFH today'],
-            ['james', 'James Parker', 'JP', Palette::Lilac, 'Office · back 6pm'],
-            ['mia', 'Mia Parker', 'MP', Palette::Sun, 'School · swim club'],
-            ['noah', 'Noah Parker', 'NP', Palette::Sky, 'School · football'],
+            ['sarah', 'Sarah Parker', 'SP', Palette::Mint, 'WFH today', HouseholdRole::Owner],
+            ['james', 'James Parker', 'JP', Palette::Lilac, 'Office · back 6pm', HouseholdRole::Adult],
+            ['mia', 'Mia Parker', 'MP', Palette::Sun, 'School · swim club', HouseholdRole::Teen],
+            ['noah', 'Noah Parker', 'NP', Palette::Sky, 'School · football', HouseholdRole::Child],
         ];
 
         $members = [];
 
-        foreach ($people as [$key, $name, $initials, $colour, $status]) {
+        foreach ($people as [$key, $name, $initials, $colour, $status, $role]) {
             $members[$key] = User::create([
                 'household_id' => $household->id,
                 'name' => $name,
                 'initials' => $initials,
                 'colour' => $colour,
                 'status_line' => $status,
+                'role' => $role,
                 'email' => "{$key}@househub.test",
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
             ]);
         }
+
+        User::create([
+            'household_id' => $household->id,
+            'name' => 'Margaret Parker',
+            'initials' => 'MP',
+            'colour' => Palette::Coral,
+            'status_line' => null,
+            'role' => HouseholdRole::Adult,
+            'pending' => true,
+            'email' => 'margaret@parkerhouse.co.uk',
+            'password' => Hash::make(Str::random(40)),
+        ]);
 
         return $members;
     }
@@ -283,20 +298,19 @@ class HouseHubSeeder extends Seeder
     {
         $month = CarbonImmutable::today()->startOfMonth();
 
-        // [label, colour, budgeted £, spent £] — the four categories from the design.
+        // [label, colour, budgeted £] — the four categories from the design.
         $categories = [
-            ['Food & shopping', Palette::Coral, 900, 412],
-            ['Utilities', Palette::Mint, 600, 238],
-            ['Subscriptions', Palette::Sun, 150, 86],
-            ['Fuel', Palette::Sky, 500, 124],
+            ['Food & shopping', Palette::Coral, 900],
+            ['Utilities', Palette::Mint, 600],
+            ['Subscriptions', Palette::Sun, 150],
+            ['Fuel', Palette::Sky, 500],
         ];
 
-        foreach ($categories as $position => [$label, $colour, $budgeted, $spent]) {
+        foreach ($categories as $position => [$label, $colour, $budgeted]) {
             $household->budgetCategories()->create([
                 'label' => $label,
                 'colour' => $colour,
                 'budgeted_pence' => $budgeted * 100,
-                'spent_pence' => $spent * 100,
                 'month' => $month->toDateString(),
                 'position' => $position,
             ]);

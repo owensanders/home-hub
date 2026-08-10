@@ -24,7 +24,6 @@ class BudgetCategoryFactory extends Factory
             'icon' => '📌',
             'colour' => Palette::Coral,
             'budgeted_pence' => 50000,
-            'spent_pence' => 0,
             'month' => CarbonImmutable::now()->startOfMonth(),
             'position' => 0,
         ];

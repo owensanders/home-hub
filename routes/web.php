@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\BudgetController;
-use App\Http\Controllers\BudgetTransactionController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChoreController;
 use App\Http\Controllers\DashboardController;
@@ -56,9 +55,6 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('budget/categories', [BudgetController::class, 'storeCategory'])->name('budget.categories.store');
     Route::patch('budget/categories/{category}', [BudgetController::class, 'updateCategory'])->name('budget.categories.update');
     Route::delete('budget/categories/{category}', [BudgetController::class, 'destroyCategory'])->name('budget.categories.destroy');
-
-    Route::post('budget/transactions', [BudgetTransactionController::class, 'store'])->name('budget.transactions.store');
-    Route::patch('budget/transactions/{transaction}', [BudgetTransactionController::class, 'updateCategory'])->name('budget.transactions.update');
 
     Route::post('budget/income', [IncomeSourceController::class, 'store'])->name('budget.income.store');
     Route::patch('budget/income/{income}', [IncomeSourceController::class, 'update'])->name('budget.income.update');

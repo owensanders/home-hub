@@ -15,11 +15,8 @@ class BudgetCategoryData extends Data
         public string $label,
         public string $icon,
         public string $colour,
-        public string $spent,
         public string $budgeted,
         public int $budgetedPence,
-        public int $spentPence,
-        public int $percentageOfBudget,
         public int $shareOfTotal,
     ) {}
 
@@ -34,15 +31,10 @@ class BudgetCategoryData extends Data
             label: $category->label,
             icon: $category->icon ?? '📌',
             colour: $category->colour->cssVar(),
-            spent: Money::format($category->spent_pence),
             budgeted: Money::format($category->budgeted_pence),
             budgetedPence: $category->budgeted_pence,
-            spentPence: $category->spent_pence,
-            percentageOfBudget: $category->budgeted_pence > 0
-                ? (int) round($category->spent_pence / $category->budgeted_pence * 100)
-                : 0,
             shareOfTotal: $totalBudgetPence > 0
-                ? (int) round($category->spent_pence / $totalBudgetPence * 100)
+                ? (int) round($category->budgeted_pence / $totalBudgetPence * 100)
                 : 0,
         );
     }

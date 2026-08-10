@@ -158,11 +158,9 @@ class GetDashboardUseCase
     {
         $categories = $this->households->budgetFor($household, $today);
         $budgeted = (int) $categories->sum('budgeted_pence');
-        $spent = (int) $categories->sum('spent_pence');
 
         return new BudgetSummaryData(
             monthLabel: $today->format('F'),
-            spent: Money::format($spent),
             budgeted: Money::format($budgeted),
             daysLeft: (int) $today->diffInDays($today->endOfMonth(), absolute: true),
             categories: $categories

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
-import type { BudgetCategory, BudgetCategoryOption, BudgetTransaction, IncomeSource } from '@/types/househub';
+import type { BudgetCategory, IncomeSource } from '@/types/househub';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -13,25 +13,20 @@ const props = defineProps<{
     nextMonth: string;
     daysLeftLabel: string;
     leftToSpend: string;
-    spentLabel: string;
     budgetedLabel: string;
     perDay: string;
-    spentPence: number;
     budgetedPence: number;
     incomeTotalPence: number;
     income: IncomeSource[];
     incomeTotal: string;
     categories: BudgetCategory[];
-    transactions: BudgetTransaction[];
-    catOptions: BudgetCategoryOption[];
 }>();
 
 function pct(part: number, whole: number): number {
     return whole > 0 ? Math.min(100, Math.round((part / whole) * 100)) : 0;
 }
 
-const spentPct = computed(() => pct(props.spentPence, props.incomeTotalPence));
-const committedPct = computed(() => pct(Math.max(props.budgetedPence - props.spentPence, 0), props.incomeTotalPence));
+const assignedPct = computed(() => pct(props.budgetedPence, props.incomeTotalPence));
 const isCurrentMonth = computed(() => props.month === new Date().toISOString().slice(0, 7));
 
 // Income sources — add / edit / delete
@@ -120,28 +115,6 @@ function addCategory(): void {
         onSuccess: () => newCategoryForm.reset(),
     });
 }
-
-// Transactions — quick add, plus reassigning a transaction's category
-const transactionForm = useForm({ label: '', amount: '', budget_category_id: '' });
-
-function addTransaction(): void {
-    if (transactionForm.label.trim() === '' || transactionForm.budget_category_id === '') {
-        return;
-    }
-
-    transactionForm.post(route('budget.transactions.store'), {
-        preserveScroll: true,
-        onSuccess: () => transactionForm.reset('label', 'amount'),
-    });
-}
-
-function reassignTransaction(transaction: BudgetTransaction, categoryId: string): void {
-    router.patch(
-        route('budget.transactions.update', { transaction: transaction.id }),
-        { budget_category_id: categoryId },
-        { preserveScroll: true },
-    );
-}
 </script>
 
 <template>
@@ -179,13 +152,11 @@ function reassignTransaction(transaction: BudgetTransaction, categoryId: string)
                     <div class="mt-1 text-[52px] font-black leading-none tracking-[-0.04em]">{{ leftToSpend }}</div>
 
                     <div class="mt-3.5 flex h-3 max-w-[560px] overflow-hidden rounded-lg bg-hh-herofilm">
-                        <span class="bg-hh-coral" :style="{ width: `${spentPct}%` }"></span>
-                        <span class="bg-hh-sun opacity-85" :style="{ width: `${committedPct}%` }"></span>
+                        <span class="bg-hh-coral" :style="{ width: `${assignedPct}%` }"></span>
                     </div>
 
                     <div class="mt-3 flex gap-5 text-[13px] text-hh-onhero2">
-                        <span><b class="text-hh-onhero">{{ spentLabel }}</b> spent</span>
-                        <span><b class="text-hh-onhero">{{ budgetedLabel }}</b> budgeted</span>
+                        <span><b class="text-hh-onhero">{{ budgetedLabel }}</b> assigned</span>
                         <span><b class="text-hh-onhero">{{ perDay }}</b> a day to stay on track</span>
                     </div>
                 </div>
@@ -241,7 +212,6 @@ function reassignTransaction(transaction: BudgetTransaction, categoryId: string)
                 <section class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
                     <div class="mb-2.5 flex items-baseline gap-2.5">
                         <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Where it goes</h3>
-                        <span class="text-xs text-hh-ink3">Budget vs actual</span>
                     </div>
 
                     <div class="flex flex-col gap-1">
@@ -268,13 +238,12 @@ function reassignTransaction(transaction: BudgetTransaction, categoryId: string)
                                 <template v-else>
                                     <div class="flex items-center gap-2">
                                         <span class="text-sm font-semibold">{{ category.label }}</span>
-                                        <span class="ml-auto font-mono text-[12.5px]">{{ category.spent }}</span>
-                                        <span class="font-mono text-[12.5px] text-hh-ink3">/ {{ category.budgeted }}</span>
+                                        <span class="ml-auto font-mono text-[12.5px]">{{ category.budgeted }}</span>
                                     </div>
                                     <div class="mt-1.5 h-[7px] overflow-hidden rounded bg-hh-sunk">
                                         <span
                                             class="block h-full rounded transition-[width]"
-                                            :style="{ width: `${category.percentageOfBudget}%`, background: category.colour }"
+                                            :style="{ width: `${category.shareOfTotal}%`, background: category.colour }"
                                         ></span>
                                     </div>
                                 </template>
@@ -337,54 +306,6 @@ function reassignTransaction(transaction: BudgetTransaction, categoryId: string)
                     </div>
                 </section>
             </div>
-
-            <!-- Recent activity -->
-            <section class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
-                <h3 class="mb-3 text-[15px] font-extrabold tracking-[-0.01em]">Recent activity</h3>
-
-                <div class="flex flex-col gap-0.5">
-                    <div
-                        v-for="transaction in transactions"
-                        :key="transaction.id"
-                        class="flex items-center gap-3 rounded-[12px] px-2 py-2 transition hover:bg-hh-soft"
-                    >
-                        <span class="h-8 w-1 flex-none rounded-sm" :style="{ background: transaction.categoryColour }"></span>
-                        <div class="min-w-0 flex-1">
-                            <div class="text-[13.5px] font-semibold">{{ transaction.label }}</div>
-                            <div class="mt-0.5 flex items-center gap-1.5">
-                                <span class="text-[11.5px] text-hh-ink3">{{ transaction.meta }}</span>
-                                <select
-                                    :value="transaction.categoryId"
-                                    class="h-6 rounded-[7px] border border-hh-line bg-hh-soft px-1.5 text-[11px] font-medium"
-                                    @change="reassignTransaction(transaction, ($event.target as HTMLSelectElement).value)"
-                                >
-                                    <option v-for="option in catOptions" :key="option.id" :value="option.id">{{ option.label }}</option>
-                                </select>
-                            </div>
-                        </div>
-                        <span class="font-mono text-[13px]">{{ transaction.amount }}</span>
-                    </div>
-
-                    <p v-if="transactions.length === 0" class="my-2 text-[13px] text-hh-ink3">Nothing logged yet this month.</p>
-                </div>
-
-                <div class="mt-3.5 flex gap-2">
-                    <input
-                        v-model="transactionForm.label"
-                        type="text"
-                        class="hh-input min-w-0 flex-1"
-                        placeholder="Log a spend, e.g. Petrol"
-                    />
-                    <input v-model="transactionForm.amount" type="text" class="hh-input w-[100px]" placeholder="£ amount" />
-                    <select v-model="transactionForm.budget_category_id" class="hh-input w-[150px] cursor-pointer font-semibold">
-                        <option value="" disabled>Category</option>
-                        <option v-for="option in catOptions" :key="option.id" :value="String(option.id)">{{ option.label }}</option>
-                    </select>
-                    <button type="button" class="hh-btn w-auto flex-none bg-hh-coral text-white" @click="addTransaction">
-                        <Plus class="h-4 w-4" :stroke-width="2.5" />
-                    </button>
-                </div>
-            </section>
         </div>
 
         <!-- Add / edit income source -->

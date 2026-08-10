@@ -278,8 +278,8 @@ function toggleChore(id: number): void {
                     </div>
 
                     <div class="flex items-baseline gap-2.5">
-                        <span class="font-serif text-[40px] leading-[1.15]">{{ dashboard.budget.spent }}</span>
-                        <span class="text-[13px] text-hh-ink3">of {{ dashboard.budget.budgeted }}</span>
+                        <span class="font-serif text-[40px] leading-[1.15]">{{ dashboard.budget.budgeted }}</span>
+                        <span class="text-[13px] text-hh-ink3">assigned</span>
                     </div>
 
                     <div class="my-3 flex h-2.5 overflow-hidden rounded-md bg-hh-sunk">
@@ -294,13 +294,7 @@ function toggleChore(id: number): void {
                         <div v-for="category in dashboard.budget.categories" :key="category.id" class="flex items-center gap-3">
                             <span class="h-2 w-2 flex-none rounded-[3px]" :style="{ background: category.colour }"></span>
                             <span class="w-24 flex-none text-[13px] font-medium">{{ category.label }}</span>
-                            <span class="h-1.5 flex-1 overflow-hidden rounded bg-hh-sunk">
-                                <span
-                                    class="block h-full rounded"
-                                    :style="{ width: `${category.percentageOfBudget}%`, background: category.colour }"
-                                ></span>
-                            </span>
-                            <span class="w-[52px] text-right font-mono text-[12.5px]">{{ category.spent }}</span>
+                            <span class="ml-auto font-mono text-[12.5px]">{{ category.budgeted }}</span>
                         </div>
                     </div>
                 </section>
