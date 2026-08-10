@@ -3,7 +3,7 @@ import Toast from '@/components/househub/Toast.vue';
 import { useAppearance } from '@/composables/useAppearance';
 import type { SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { House } from 'lucide-vue-next';
+import { House, LogOut } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -112,10 +112,10 @@ function toggleTheme(): void {
                         method="post"
                         as="button"
                         type="button"
-                        title="Sign out"
-                        class="h-[38px] w-[38px] rounded-xl bg-hh-soft text-sm transition-colors hover:bg-hh-line"
+                        title="Logout"
+                        class="grid h-[38px] w-[38px] place-items-center rounded-xl bg-hh-soft text-sm transition-colors hover:bg-hh-line"
                     >
-                        ⏻
+                        <LogOut class="h-4 w-4" />
                     </Link>
                 </header>
 
