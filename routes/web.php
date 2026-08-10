@@ -62,7 +62,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Screens the design leaves for a later pass. They render the "not designed
     // yet" empty state rather than 404ing, so the sidebar stays navigable.
-    foreach (['house', 'documents', 'maintenance'] as $screen) {
+    foreach (['house', 'documents'] as $screen) {
         Route::get($screen, fn () => Inertia::render('Placeholder', ['screen' => $screen]))->name("{$screen}.index");
     }
 });

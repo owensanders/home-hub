@@ -8,7 +8,6 @@ const ICONS: Record<string, string> = {
     budget: '💰',
     house: '🏡',
     documents: '📂',
-    maintenance: '🔧',
 };
 
 const props = defineProps<{ screen: string }>();

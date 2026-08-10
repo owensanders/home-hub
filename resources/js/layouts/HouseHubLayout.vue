@@ -35,7 +35,6 @@ const nav = computed(() => [
     { label: 'Budget', icon: '💰', route: 'budget.index' },
     { label: 'House', icon: '🏡', route: 'house.index' },
     { label: 'Documents', icon: '📂', route: 'documents.index' },
-    { label: 'Maintenance', icon: '🔧', route: 'maintenance.index' },
     // Settings has three sub-pages, so match on the URL prefix rather than one route name.
     { label: 'Settings', icon: '⚙', route: 'profile.edit', prefix: '/settings' },
 ]);

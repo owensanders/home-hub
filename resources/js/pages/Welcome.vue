@@ -68,7 +68,6 @@ const pillars = [
 const secondary = [
     { icon: '💰', title: 'Budget', body: 'Household spend by category, month to month.' },
     { icon: '📂', title: 'Documents', body: 'Insurance, MOTs, tenancy, all searchable.' },
-    { icon: '🔧', title: 'Maintenance', body: 'Boiler, gutters, filters — before they bite.' },
     { icon: '🛡', title: 'Warranties', body: 'Receipts and expiry dates in one place.' },
     { icon: '✅', title: 'Chores', body: 'Rotas, streaks and a bit of friendly rivalry.' },
     { icon: '🏡', title: 'Home file', body: 'Meter readings, paint codes, boiler model.' },
@@ -118,7 +117,6 @@ const plans: Plan[] = [
             { text: 'Household budget and bill tracking', included: true },
             { text: 'Document vault with 20GB storage', included: true },
             { text: 'Warranty and expiry reminders', included: true },
-            { text: 'Maintenance schedules for the house', included: true },
         ],
     },
     {
