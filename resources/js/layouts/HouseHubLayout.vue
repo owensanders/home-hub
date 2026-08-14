@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Toast from '@/components/househub/Toast.vue';
 import { useAppearance } from '@/composables/useAppearance';
-import type { SharedData } from '@/types';
+import { useHouseholdRole } from '@/composables/useHouseholdRole';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { House, LogOut } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -11,12 +11,12 @@ const props = defineProps<{
     subtitle?: string;
 }>();
 
-const page = usePage<SharedData>();
+const page = usePage();
 const { appearance, updateAppearance } = useAppearance();
+const { user, canManage } = useHouseholdRole();
 
 const isDark = computed(() => appearance.value === 'dark');
 
-const user = computed(() => page.props.auth?.user);
 const initials = computed(() =>
     (user.value?.name ?? '')
         .split(' ')
@@ -26,18 +26,21 @@ const initials = computed(() =>
         .toUpperCase(),
 );
 
-const nav = computed(() => [
-    { label: 'Dashboard', icon: '🏠', route: 'dashboard' },
-    { label: 'Calendar', icon: '📅', route: 'calendar.index' },
-    { label: 'Meal Planner', icon: '🍽', route: 'meals.index' },
-    { label: 'Shopping Lists', icon: '🛒', route: 'shopping.index' },
-    { label: 'Chores', icon: '✅', route: 'chores.index' },
-    { label: 'Budget', icon: '💰', route: 'budget.index' },
-    { label: 'House', icon: '🏡', route: 'house.index' },
-    { label: 'Documents', icon: '📂', route: 'documents.index' },
-    // Settings has three sub-pages, so match on the URL prefix rather than one route name.
-    { label: 'Settings', icon: '⚙', route: 'profile.edit', prefix: '/settings' },
-]);
+const nav = computed(() =>
+    [
+        { label: 'Dashboard', icon: '🏠', route: 'dashboard' },
+        { label: 'Calendar', icon: '📅', route: 'calendar.index' },
+        { label: 'Meal Planner', icon: '🍽', route: 'meals.index' },
+        { label: 'Shopping Lists', icon: '🛒', route: 'shopping.index' },
+        { label: 'Chores', icon: '✅', route: 'chores.index' },
+        // Budget, House, and Documents involve money or household administration — Owner/Adult only.
+        canManage.value ? { label: 'Budget', icon: '💰', route: 'budget.index' } : null,
+        canManage.value ? { label: 'House', icon: '🏡', route: 'house.index' } : null,
+        canManage.value ? { label: 'Documents', icon: '📂', route: 'documents.index' } : null,
+        // Settings has three sub-pages, so match on the URL prefix rather than one route name.
+        { label: 'Settings', icon: '⚙', route: 'profile.edit', prefix: '/settings' },
+    ].filter((item) => item !== null),
+);
 
 function isActive(item: { route: string; prefix?: string }): boolean {
     return item.prefix ? page.url.startsWith(item.prefix) : route().current(item.route);

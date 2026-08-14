@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { useHouseholdRole } from '@/composables/useHouseholdRole';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { dial, tickStyle } from '@/lib/househub';
-import type { Dashboard } from '@/types/househub';
+import type { Chore, Dashboard } from '@/types/househub';
 import { Link, router, useForm } from '@inertiajs/vue3';
 
 const props = defineProps<{ dashboard: Dashboard }>();
+
+const { canManage, isTeen, canToggleChore } = useHouseholdRole();
+const canToggleShoppingItems = isTeen.value || canManage.value;
 
 const draft = useForm({ name: '' });
 
@@ -22,11 +26,19 @@ function addItem(): void {
 }
 
 function toggleItem(id: number): void {
+    if (!canToggleShoppingItems) {
+        return;
+    }
+
     router.patch(route('shopping.items.toggle', { item: id }), {}, { preserveScroll: true });
 }
 
-function toggleChore(id: number): void {
-    router.patch(route('chores.toggle', { chore: id }), {}, { preserveScroll: true });
+function toggleChore(chore: Chore): void {
+    if (!canToggleChore(chore)) {
+        return;
+    }
+
+    router.patch(route('chores.toggle', { chore: chore.id }), {}, { preserveScroll: true });
 }
 </script>
 
@@ -139,53 +151,64 @@ function toggleChore(id: number): void {
 
                 <!-- Shopping preview -->
                 <section
-                    v-if="dashboard.shoppingList"
                     class="flex flex-col rounded-[22px] border border-hh-line bg-hh-card p-[22px] transition hover:-translate-y-0.5 hover:shadow-hh"
                 >
-                    <div class="mb-2.5 flex items-baseline gap-2.5">
-                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">{{ dashboard.shoppingList.name }} list</h3>
-                        <span class="text-xs text-hh-ink3">{{ dashboard.shoppingList.remaining }} left</span>
-                        <Link :href="route('shopping.index')" class="ml-auto text-[13px] font-semibold text-hh-coral hover:opacity-75">
-                            All lists →
-                        </Link>
-                    </div>
+                    <template v-if="dashboard.shoppingList">
+                        <div class="mb-2.5 flex items-baseline gap-2.5">
+                            <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">{{ dashboard.shoppingList.name }} list</h3>
+                            <span class="text-xs text-hh-ink3">{{ dashboard.shoppingList.remaining }} left</span>
+                            <Link :href="route('shopping.index')" class="ml-auto text-[13px] font-semibold text-hh-coral hover:opacity-75">
+                                All lists →
+                            </Link>
+                        </div>
 
-                    <div class="flex flex-col gap-px">
-                        <button
-                            v-for="item in dashboard.shoppingList.items.slice(0, 5)"
-                            :key="item.id"
-                            type="button"
-                            class="flex min-h-[44px] w-full items-center gap-3 rounded-[11px] px-2 text-left transition-colors hover:bg-hh-soft"
-                            @click="toggleItem(item.id)"
-                        >
-                            <span
-                                class="grid h-[21px] w-[21px] flex-none place-items-center rounded-[7px] border-[1.5px] text-[11px] text-[#0E1A2B] transition"
-                                :style="tickStyle(item.done)"
+                        <div class="flex flex-col gap-px">
+                            <button
+                                v-for="item in dashboard.shoppingList.items.slice(0, 5)"
+                                :key="item.id"
+                                type="button"
+                                :disabled="!canToggleShoppingItems"
+                                class="flex min-h-[44px] w-full items-center gap-3 rounded-[11px] px-2 text-left transition-colors hover:bg-hh-soft disabled:cursor-not-allowed"
+                                @click="toggleItem(item.id)"
                             >
-                                {{ item.done ? '✓' : '' }}
-                            </span>
-                            <span class="flex-1 text-sm" :class="item.done ? 'text-hh-ink3 line-through' : 'text-hh-ink'">
-                                {{ item.name }}
-                            </span>
-                            <span class="font-mono text-[11.5px] text-hh-ink3">{{ item.quantity }}</span>
-                        </button>
-                    </div>
+                                <span
+                                    class="grid h-[21px] w-[21px] flex-none place-items-center rounded-[7px] border-[1.5px] text-[11px] text-[#0E1A2B] transition"
+                                    :style="tickStyle(item.done)"
+                                >
+                                    {{ item.done ? '✓' : '' }}
+                                </span>
+                                <span class="flex-1 text-sm" :class="item.done ? 'text-hh-ink3 line-through' : 'text-hh-ink'">
+                                    {{ item.name }}
+                                </span>
+                                <span class="font-mono text-[11.5px] text-hh-ink3">{{ item.quantity }}</span>
+                            </button>
+                        </div>
 
-                    <form class="mt-auto flex gap-2 pt-3" @submit.prevent="addItem">
-                        <input
-                            v-model="draft.name"
-                            placeholder="Add an item…"
-                            aria-label="Add an item"
-                            class="h-11 flex-1 rounded-[13px] border border-hh-line bg-hh-sunk px-3.5 text-sm text-hh-ink placeholder:text-hh-ink3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hh-coral"
-                        />
-                        <button
-                            type="submit"
-                            :disabled="draft.processing"
-                            class="h-11 w-11 rounded-[13px] bg-hh-coral text-xl text-white transition hover:scale-105 disabled:opacity-50"
-                        >
-                            +
-                        </button>
-                    </form>
+                        <form v-if="canManage" class="mt-auto flex gap-2 pt-3" @submit.prevent="addItem">
+                            <input
+                                v-model="draft.name"
+                                placeholder="Add an item…"
+                                aria-label="Add an item"
+                                class="h-11 flex-1 rounded-[13px] border border-hh-line bg-hh-sunk px-3.5 text-sm text-hh-ink placeholder:text-hh-ink3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hh-coral"
+                            />
+                            <button
+                                type="submit"
+                                :disabled="draft.processing"
+                                class="h-11 w-11 rounded-[13px] bg-hh-coral text-xl text-white transition hover:scale-105 disabled:opacity-50"
+                            >
+                                +
+                            </button>
+                        </form>
+                    </template>
+                    <template v-else>
+                        <div class="mb-2.5 flex items-baseline gap-2.5">
+                            <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Shopping list</h3>
+                            <Link :href="route('shopping.index')" class="ml-auto text-[13px] font-semibold text-hh-coral hover:opacity-75">
+                                All lists →
+                            </Link>
+                        </div>
+                        <p class="py-10 text-center text-sm text-hh-ink3">No shopping list yet.</p>
+                    </template>
                 </section>
             </div>
 
@@ -219,9 +242,10 @@ function toggleChore(id: number): void {
                             v-for="chore in dashboard.chores.slice(0, 4)"
                             :key="chore.id"
                             type="button"
-                            class="flex min-h-[48px] w-full items-center gap-3 rounded-[14px] border border-hh-line px-3 text-left transition hover:translate-x-0.5"
+                            :disabled="!canToggleChore(chore)"
+                            class="flex min-h-[48px] w-full items-center gap-3 rounded-[14px] border border-hh-line px-3 text-left transition hover:translate-x-0.5 disabled:cursor-not-allowed"
                             :class="chore.done ? 'bg-hh-sunk' : 'bg-hh-card'"
-                            @click="toggleChore(chore.id)"
+                            @click="toggleChore(chore)"
                         >
                             <span
                                 class="grid h-[21px] w-[21px] flex-none place-items-center rounded-full border-[1.5px] text-[11px] text-[#0E1A2B]"

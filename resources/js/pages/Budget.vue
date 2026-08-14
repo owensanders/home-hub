@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { donut } from '@/lib/househub';
@@ -79,13 +80,16 @@ function submitIncome(): void {
 }
 
 function destroyIncome(): void {
-    if (editingIncome.value === null || !confirm('Remove this income source?')) {
+    if (editingIncome.value === null) {
         return;
     }
 
-    router.delete(route('budget.income.destroy', { income: editingIncome.value.id }), {
-        preserveScroll: true,
-        onSuccess: () => (incomeOpen.value = false),
+    const income = editingIncome.value;
+    requestConfirm('Remove this income source?', () => {
+        router.delete(route('budget.income.destroy', { income: income.id }), {
+            preserveScroll: true,
+            onSuccess: () => (incomeOpen.value = false),
+        });
     });
 }
 
@@ -112,11 +116,26 @@ function submitCategory(category: BudgetCategory): void {
 }
 
 function destroyCategory(category: BudgetCategory): void {
-    if (!confirm(`Remove "${category.label}"? Its logged spending will be removed too.`)) {
-        return;
-    }
+    requestConfirm(`Remove "${category.label}"? Its logged spending will be removed too.`, () => {
+        router.delete(route('budget.categories.destroy', { category: category.id }), { preserveScroll: true });
+    });
+}
 
-    router.delete(route('budget.categories.destroy', { category: category.id }), { preserveScroll: true });
+// Shared delete-confirmation dialog
+const confirmDialogOpen = ref(false);
+const confirmMessage = ref('');
+let pendingAction: (() => void) | null = null;
+
+function requestConfirm(message: string, action: () => void): void {
+    confirmMessage.value = message;
+    pendingAction = action;
+    confirmDialogOpen.value = true;
+}
+
+function confirmDestroy(): void {
+    confirmDialogOpen.value = false;
+    pendingAction?.();
+    pendingAction = null;
 }
 
 const newCategoryForm = useForm({ label: '', budgeted: '', is_recurring: false });
@@ -423,5 +442,12 @@ function addCategory(): void {
                 </form>
             </DialogContent>
         </Dialog>
+
+        <ConfirmDialog
+            :open="confirmDialogOpen"
+            :message="confirmMessage"
+            @update:open="confirmDialogOpen = $event"
+            @confirm="confirmDestroy"
+        />
     </HouseHubLayout>
 </template>

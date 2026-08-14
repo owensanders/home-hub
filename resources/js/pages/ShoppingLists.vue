@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useHouseholdRole } from '@/composables/useHouseholdRole';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { tickStyle } from '@/lib/househub';
 import type { ShoppingGroup, ShoppingItem, ShoppingList } from '@/types/househub';
@@ -16,6 +18,9 @@ const props = defineProps<{
 const COLOURS = ['mint', 'lilac', 'sun', 'sky', 'coral'];
 const CATEGORIES = ['fruit', 'vegetables', 'fresh', 'frozen', 'bakery', 'household'];
 
+const { canManage, isTeen } = useHouseholdRole();
+const canToggleItems = computed(() => canManage.value || isTeen.value);
+
 const draft = useForm({ name: '' });
 
 function addItem(): void {
@@ -30,6 +35,10 @@ function addItem(): void {
 }
 
 function toggleItem(id: number): void {
+    if (!canToggleItems.value) {
+        return;
+    }
+
     router.patch(route('shopping.items.toggle', { item: id }), {}, { preserveScroll: true });
 }
 
@@ -138,7 +147,7 @@ function confirmDestroy(): void {
     <HouseHubLayout title="Shopping Lists" :subtitle="`${lists.length} lists`">
         <div class="flex animate-hh-rise flex-col items-start gap-5 lg:flex-row">
             <div class="flex w-full flex-none flex-col gap-1.5 lg:w-[232px]">
-                <button type="button" class="hh-btn mb-1 w-auto self-start bg-hh-coral text-white" @click="openNewList">
+                <button v-if="canManage" type="button" class="hh-btn mb-1 w-auto self-start bg-hh-coral text-white" @click="openNewList">
                     <Plus class="h-4 w-4" :stroke-width="2.5" />
                     New list
                 </button>
@@ -162,6 +171,7 @@ function confirmDestroy(): void {
                         <div class="flex items-center gap-1.5">
                             <h3 class="text-lg font-extrabold tracking-[-0.02em]">{{ active.name }}</h3>
                             <button
+                                v-if="canManage"
                                 type="button"
                                 aria-label="Rename list"
                                 class="rounded-lg p-1 transition hover:bg-hh-soft"
@@ -172,12 +182,18 @@ function confirmDestroy(): void {
                         </div>
                         <div class="mt-1 text-[13px] text-hh-ink3">{{ active.remaining }} items left</div>
                     </div>
-                    <button type="button" aria-label="Delete list" class="rounded-lg p-1.5 transition hover:bg-hh-soft" @click="destroyActiveList">
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        aria-label="Delete list"
+                        class="rounded-lg p-1.5 transition hover:bg-hh-soft"
+                        @click="destroyActiveList"
+                    >
                         <Trash2 class="h-4 w-4 text-hh-ink3" />
                     </button>
                 </div>
 
-                <form class="my-4 flex gap-2" @submit.prevent="addItem">
+                <form v-if="canManage" class="my-4 flex gap-2" @submit.prevent="addItem">
                     <input
                         v-model="draft.name"
                         placeholder="Add to this list…"
@@ -200,7 +216,8 @@ function confirmDestroy(): void {
                         <div v-for="item in group.items" :key="item.id" class="group relative">
                             <button
                                 type="button"
-                                class="flex min-h-[46px] w-full items-center gap-3 rounded-[13px] px-2.5 pr-8 text-left transition-colors hover:bg-hh-soft"
+                                :disabled="!canToggleItems"
+                                class="flex min-h-[46px] w-full items-center gap-3 rounded-[13px] px-2.5 pr-8 text-left transition-colors hover:bg-hh-soft disabled:cursor-not-allowed"
                                 @click="toggleItem(item.id)"
                             >
                                 <span
@@ -215,6 +232,7 @@ function confirmDestroy(): void {
                                 <span class="font-mono text-[11.5px] text-hh-ink3">{{ item.quantity }}</span>
                             </button>
                             <button
+                                v-if="canManage"
                                 type="button"
                                 aria-label="Edit item"
                                 class="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 transition group-hover:opacity-100"
@@ -309,20 +327,11 @@ function confirmDestroy(): void {
             </DialogContent>
         </Dialog>
 
-        <!-- Confirm delete -->
-        <Dialog :open="confirmDialogOpen" @update:open="confirmDialogOpen = $event">
-            <DialogContent class="rounded-[22px] border-hh-line bg-hh-card text-hh-ink sm:rounded-[22px]">
-                <DialogHeader>
-                    <DialogTitle class="text-[16px] font-extrabold tracking-tight">Are you sure?</DialogTitle>
-                </DialogHeader>
-
-                <p class="text-[13.5px] text-hh-ink2">{{ confirmMessage }}</p>
-
-                <div class="flex items-center gap-2">
-                    <button type="button" class="hh-btn w-auto bg-hh-coral text-white" @click="confirmDestroy">Delete</button>
-                    <button type="button" class="hh-btn w-auto bg-hh-soft text-hh-ink" @click="confirmDialogOpen = false">Cancel</button>
-                </div>
-            </DialogContent>
-        </Dialog>
+        <ConfirmDialog
+            :open="confirmDialogOpen"
+            :message="confirmMessage"
+            @update:open="confirmDialogOpen = $event"
+            @confirm="confirmDestroy"
+        />
     </HouseHubLayout>
 </template>

@@ -19,11 +19,11 @@ function sendInvite(): void {
 }
 
 function setRole(memberId: number, role: string): void {
-    router.patch(route('house.members.role', memberId), { role }, { preserveScroll: true });
+    router.patch(route('house.members.role', { member: memberId }), { role }, { preserveScroll: true });
 }
 
 function removeMember(memberId: number): void {
-    router.delete(route('house.members.destroy', memberId), { preserveScroll: true });
+    router.delete(route('house.members.destroy', { member: memberId }), { preserveScroll: true });
 }
 
 function toggleSetting(key: string): void {

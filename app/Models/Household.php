@@ -76,4 +76,16 @@ class Household extends Model
     {
         return $this->hasMany(IncomeSource::class)->orderBy('position');
     }
+
+    /** @return HasMany<DocumentFolder, $this> */
+    public function documentFolders(): HasMany
+    {
+        return $this->hasMany(DocumentFolder::class)->orderBy('position');
+    }
+
+    /** @return HasMany<Document, $this> */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class);
+    }
 }

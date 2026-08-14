@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useHouseholdRole } from '@/composables/useHouseholdRole';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import type { CalendarDay, CalendarEvent, CalendarMonth } from '@/types/househub';
 import { Link, router, useForm } from '@inertiajs/vue3';
@@ -12,6 +13,10 @@ const props = defineProps<{ calendar: CalendarMonth }>();
 const VISIBLE_PER_CELL = 3;
 
 const COLOURS = ['mint', 'lilac', 'sun', 'sky', 'coral'];
+
+const { canManage, isTeen } = useHouseholdRole();
+// Calendar events are shared and handy for a Teen to manage themselves (e.g. school schedules).
+const canEditCalendar = computed(() => canManage.value || isTeen.value);
 
 const filter = ref<number | null>(null);
 const open = ref(false);
@@ -71,7 +76,7 @@ function openNew(day: CalendarDay): void {
 }
 
 async function openEdit(event: CalendarEvent): Promise<void> {
-    if (event.date < todayIso.value) {
+    if (!canEditCalendar.value || event.date < todayIso.value) {
         return;
     }
 
@@ -163,7 +168,7 @@ function destroy(): void {
 
                 <span class="ml-1 text-[15px] font-extrabold tracking-tight">{{ props.calendar.monthLabel }}</span>
 
-                <button type="button" class="hh-btn ml-2 w-auto bg-hh-coral text-white" @click="openNew(defaultDay)">
+                <button v-if="canEditCalendar" type="button" class="hh-btn ml-2 w-auto bg-hh-coral text-white" @click="openNew(defaultDay)">
                     <Plus class="h-4 w-4" :stroke-width="2.5" />
                     New event
                 </button>
@@ -197,7 +202,7 @@ function destroy(): void {
                 </div>
             </div>
 
-            <div class="text-[13px] text-hh-ink3">Click any day to add an event there, or an event to edit it.</div>
+            <div v-if="canEditCalendar" class="text-[13px] text-hh-ink3">Click any day to add an event there, or an event to edit it.</div>
 
             <div class="overflow-x-auto">
                 <div class="min-w-[760px]">
@@ -219,7 +224,7 @@ function destroy(): void {
                                     {{ day.dateLabel }}
                                 </span>
                                 <button
-                                    v-if="day.date >= todayIso"
+                                    v-if="canEditCalendar && day.date >= todayIso"
                                     type="button"
                                     class="ml-auto grid h-[22px] w-[22px] place-items-center rounded-md text-hh-ink3 opacity-0 transition hover:bg-hh-soft hover:text-hh-ink focus-visible:opacity-100 group-hover:opacity-100"
                                     :aria-label="`Add an event on ${day.dateLabel}`"
@@ -233,7 +238,7 @@ function destroy(): void {
                                 v-for="event in visibleEvents(day).slice(0, VISIBLE_PER_CELL)"
                                 :key="event.id"
                                 type="button"
-                                :disabled="event.date < todayIso"
+                                :disabled="!canEditCalendar || event.date < todayIso"
                                 class="flex items-center gap-1.5 rounded-[9px] bg-hh-soft px-1.5 py-1 text-left transition hover:translate-x-[2px] disabled:opacity-50 disabled:hover:translate-x-0"
                                 @click="openEdit(event)"
                             >
@@ -280,7 +285,7 @@ function destroy(): void {
                         v-for="event in expandedDay ? visibleEvents(expandedDay) : []"
                         :key="event.id"
                         type="button"
-                        :disabled="event.date < todayIso"
+                        :disabled="!canEditCalendar || event.date < todayIso"
                         class="flex items-center gap-3 rounded-[13px] bg-hh-sunk px-3 py-2.5 text-left transition hover:translate-x-[3px] disabled:opacity-50 disabled:hover:translate-x-0"
                         @click="openEdit(event)"
                     >

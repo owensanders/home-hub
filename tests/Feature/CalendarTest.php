@@ -122,16 +122,16 @@ class CalendarTest extends TestCase
 
         $event = CalendarEvent::factory()->create([
             'household_id' => $user->household_id,
-            'starts_at' => CarbonImmutable::parse('2026-08-12 18:00'),
-            'ends_at' => CarbonImmutable::parse('2026-08-12 19:30'),
+            'starts_at' => CarbonImmutable::tomorrow()->setTime(18, 0),
+            'ends_at' => CarbonImmutable::tomorrow()->setTime(19, 30),
         ]);
 
         // The hidden end time is still in the payload and is now before the start.
         $this->actingAs($user)
             ->patch("/calendar/events/{$event->id}", [
                 'title' => 'All-day now',
-                'starts_at' => '2026-08-12T20:00',
-                'ends_at' => '2026-08-12T19:30',
+                'starts_at' => CarbonImmutable::tomorrow()->setTime(20, 0)->format('Y-m-d\TH:i'),
+                'ends_at' => CarbonImmutable::tomorrow()->setTime(19, 30)->format('Y-m-d\TH:i'),
                 'is_all_day' => true,
             ])
             ->assertRedirect()
@@ -203,8 +203,8 @@ class CalendarTest extends TestCase
         $this->actingAs($user)
             ->post('/calendar/events', [
                 'title' => '  Football practice  ',
-                'starts_at' => '2026-08-12T18:00',
-                'ends_at' => '2026-08-12T19:30',
+                'starts_at' => CarbonImmutable::tomorrow()->setTime(18, 0)->format('Y-m-d\TH:i'),
+                'ends_at' => CarbonImmutable::tomorrow()->setTime(19, 30)->format('Y-m-d\TH:i'),
                 'location' => 'Beckett Park',
                 'colour' => 'sky',
                 'attendees' => [$child->id],
@@ -228,8 +228,8 @@ class CalendarTest extends TestCase
         $this->actingAs($user)
             ->post('/calendar/events', [
                 'title' => "Grandma's birthday",
-                'starts_at' => '2026-08-09T00:00',
-                'ends_at' => '2026-08-09T23:00',
+                'starts_at' => CarbonImmutable::tomorrow()->setTime(0, 0)->format('Y-m-d\TH:i'),
+                'ends_at' => CarbonImmutable::tomorrow()->setTime(23, 0)->format('Y-m-d\TH:i'),
                 'is_all_day' => true,
             ])
             ->assertRedirect();
@@ -249,7 +249,7 @@ class CalendarTest extends TestCase
         $this->actingAs($user)
             ->patch("/calendar/events/{$event->id}", [
                 'title' => 'Swim club',
-                'starts_at' => '2026-08-11T16:00',
+                'starts_at' => CarbonImmutable::tomorrow()->setTime(16, 0)->format('Y-m-d\TH:i'),
                 'attendees' => [$child->id],
             ])
             ->assertRedirect()
@@ -338,8 +338,8 @@ class CalendarTest extends TestCase
         $this->actingAs($user)
             ->post('/calendar/events', [
                 'title' => 'Backwards',
-                'starts_at' => '2026-08-12T18:00',
-                'ends_at' => '2026-08-12T17:00',
+                'starts_at' => CarbonImmutable::tomorrow()->setTime(18, 0)->format('Y-m-d\TH:i'),
+                'ends_at' => CarbonImmutable::tomorrow()->setTime(17, 0)->format('Y-m-d\TH:i'),
             ])
             ->assertSessionHasErrors('ends_at');
 
@@ -355,7 +355,7 @@ class CalendarTest extends TestCase
         $this->actingAs($user)
             ->post('/calendar/events', [
                 'title' => 'Not yours',
-                'starts_at' => '2026-08-12T18:00',
+                'starts_at' => CarbonImmutable::tomorrow()->setTime(18, 0)->format('Y-m-d\TH:i'),
                 'attendees' => [$stranger->id],
             ])
             ->assertSessionHasErrors('attendees.0');
@@ -375,7 +375,10 @@ class CalendarTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->patch("/calendar/events/{$event->id}", ['title' => 'Mine now', 'starts_at' => '2026-08-12T18:00'])
+            ->patch("/calendar/events/{$event->id}", [
+                'title' => 'Mine now',
+                'starts_at' => CarbonImmutable::tomorrow()->setTime(18, 0)->format('Y-m-d\TH:i'),
+            ])
             ->assertNotFound();
 
         $this->actingAs($user)

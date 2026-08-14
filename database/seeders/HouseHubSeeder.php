@@ -16,6 +16,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -38,6 +39,7 @@ class HouseHubSeeder extends Seeder
         $this->seedMeals($household, $members);
         $this->seedCalendar($household, $members);
         $this->seedBudget($household);
+        $this->seedDocuments($household, $members);
     }
 
     /** @return array<string, User> */
@@ -313,6 +315,56 @@ class HouseHubSeeder extends Seeder
                 'budgeted_pence' => $budgeted * 100,
                 'month' => $month->toDateString(),
                 'position' => $position,
+            ]);
+        }
+    }
+
+    /** @param array<string, User> $members */
+    private function seedDocuments(Household $household, array $members): void
+    {
+        $folders = [
+            ['Property', '🏠', Palette::Lilac],
+            ['Insurance', '🛡', Palette::Sky],
+            ['Vehicles', '🚗', Palette::Sun],
+            ['Utilities', '💡', Palette::Mint],
+        ];
+
+        $created = [];
+
+        foreach ($folders as $position => [$name, $icon, $colour]) {
+            $created[$name] = $household->documentFolders()->create([
+                'name' => $name,
+                'icon' => $icon,
+                'colour' => $colour,
+                'position' => $position,
+            ]);
+        }
+
+        // [folder, filename, extension, size in KB, uploader, expires in N days]
+        $documents = [
+            ['Property', 'Mortgage offer — Nationwide.pdf', 'pdf', 2480, 'sarah', null],
+            ['Property', 'EPC certificate.pdf', 'pdf', 820, 'sarah', null],
+            ['Insurance', 'Buildings & contents policy.pdf', 'pdf', 1180, 'sarah', 240],
+            ['Vehicles', 'Car insurance — Golf.pdf', 'pdf', 960, 'james', 35],
+            ['Vehicles', 'MOT certificate 2026.jpg', 'jpg', 1420, 'james', null],
+            ['Utilities', 'Octopus annual statement.pdf', 'pdf', 540, 'sarah', null],
+        ];
+
+        $disk = Storage::disk(config('documents.disk'));
+
+        foreach ($documents as [$folderName, $name, $extension, $sizeKb, $uploader, $expiresInDays]) {
+            $folder = $created[$folderName];
+            $path = "documents/{$household->id}/".Str::uuid().'.'.$extension;
+            $disk->put($path, "Seeded placeholder for {$name}");
+
+            $folder->documents()->create([
+                'household_id' => $household->id,
+                'added_by' => $members[$uploader]->id,
+                'name' => $name,
+                'path' => $path,
+                'extension' => $extension,
+                'size' => $sizeKb * 1024,
+                'expires_at' => $expiresInDays !== null ? now()->addDays($expiresInDays) : null,
             ]);
         }
     }

@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useHouseholdRole } from '@/composables/useHouseholdRole';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { tint } from '@/lib/househub';
 import type { Recipe } from '@/types/househub';
@@ -10,6 +12,8 @@ import { computed, ref } from 'vue';
 defineProps<{ recipes: Recipe[] }>();
 
 const TINTS = [0, 1, 2, 3, 4];
+
+const { canManage } = useHouseholdRole();
 
 const open = ref(false);
 const editing = ref<Recipe | null>(null);
@@ -81,10 +85,22 @@ function submit(): void {
     }
 }
 
+const confirmOpen = ref(false);
+
 function destroy(): void {
-    if (editing.value === null || !confirm('Delete this recipe? Any planned meals using it will be removed too.')) {
+    if (editing.value === null) {
         return;
     }
+
+    confirmOpen.value = true;
+}
+
+function confirmDestroy(): void {
+    if (editing.value === null) {
+        return;
+    }
+
+    confirmOpen.value = false;
 
     router.delete(route('recipes.destroy', { recipe: editing.value.id }), {
         preserveScroll: true,
@@ -98,7 +114,7 @@ function destroy(): void {
 <template>
     <HouseHubLayout title="Recipe Library" :subtitle="`${recipes.length} saved`">
         <div class="flex animate-hh-rise flex-col gap-4">
-            <div class="flex items-center gap-2">
+            <div v-if="canManage" class="flex items-center gap-2">
                 <button type="button" class="hh-btn w-auto bg-hh-coral text-white" @click="openNew">
                     <Plus class="h-4 w-4" :stroke-width="2.5" />
                     New recipe
@@ -111,7 +127,7 @@ function destroy(): void {
                     :key="recipe.id"
                     type="button"
                     class="rounded-2xl border border-hh-line bg-hh-card p-3.5 text-left transition hover:-translate-y-[3px] hover:shadow-hh"
-                    @click="openEdit(recipe)"
+                    @click="canManage && openEdit(recipe)"
                 >
                     <div class="relative mb-2.5 h-[58px] rounded-xl" :style="{ background: tint(recipe.tint) }">
                         <Star
@@ -205,5 +221,12 @@ function destroy(): void {
                 </form>
             </DialogContent>
         </Dialog>
+
+        <ConfirmDialog
+            :open="confirmOpen"
+            message="Delete this recipe? Any planned meals using it will be removed too."
+            @update:open="confirmOpen = $event"
+            @confirm="confirmDestroy"
+        />
     </HouseHubLayout>
 </template>

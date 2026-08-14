@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useHouseholdRole } from '@/composables/useHouseholdRole';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { dial, tickStyle } from '@/lib/househub';
 import type { Chore, ChoreColumn, ChoreStatus, Member, MemberScore } from '@/types/househub';
@@ -12,6 +14,8 @@ const props = defineProps<{
     scores: MemberScore[];
     members: Member[];
 }>();
+
+const { canManage, canToggleChore } = useHouseholdRole();
 
 const draggingId = ref<number | null>(null);
 
@@ -34,8 +38,12 @@ function drop(status: ChoreStatus): void {
     router.patch(route('chores.move', { chore }), { status }, { preserveScroll: true });
 }
 
-function toggle(id: number): void {
-    router.patch(route('chores.toggle', { chore: id }), {}, { preserveScroll: true });
+function toggle(chore: Chore): void {
+    if (!canToggleChore(chore)) {
+        return;
+    }
+
+    router.patch(route('chores.toggle', { chore: chore.id }), {}, { preserveScroll: true });
 }
 
 const open = ref(false);
@@ -100,10 +108,22 @@ function submit(): void {
     }
 }
 
+const confirmOpen = ref(false);
+
 function destroy(): void {
-    if (editing.value === null || !confirm('Delete this chore?')) {
+    if (editing.value === null) {
         return;
     }
+
+    confirmOpen.value = true;
+}
+
+function confirmDestroy(): void {
+    if (editing.value === null) {
+        return;
+    }
+
+    confirmOpen.value = false;
 
     router.delete(route('chores.destroy', { chore: editing.value.id }), {
         preserveScroll: true,
@@ -117,7 +137,7 @@ function destroy(): void {
 <template>
     <HouseHubLayout title="Chores" subtitle="This week">
         <div class="flex animate-hh-rise flex-col gap-[18px]">
-            <div class="flex items-center gap-2">
+            <div v-if="canManage" class="flex items-center gap-2">
                 <button type="button" class="hh-btn w-auto bg-hh-coral text-white" @click="openNew">
                     <Plus class="h-4 w-4" :stroke-width="2.5" />
                     New chore
@@ -165,21 +185,23 @@ function destroy(): void {
                     <div
                         v-for="chore in column.items"
                         :key="chore.id"
-                        draggable="true"
-                        class="cursor-grab rounded-2xl border border-hh-line bg-hh-card px-3.5 py-3 transition hover:-translate-y-0.5 hover:shadow-hh"
+                        :draggable="canManage"
+                        class="rounded-2xl border border-hh-line bg-hh-card px-3.5 py-3 transition hover:-translate-y-0.5 hover:shadow-hh"
+                        :class="canManage ? 'cursor-grab' : ''"
                         :style="{ opacity: draggingId === chore.id ? 0.4 : 1 }"
                         @dragstart="startDrag($event, chore.id)"
                         @dragend="draggingId = null"
-                        @click="openEdit(chore)"
+                        @click="canManage && openEdit(chore)"
                     >
                         <div class="flex items-start gap-2.5">
                             <!-- Ticking lives on the box alone so it can't fire at the end of a drag. -->
                             <button
                                 type="button"
+                                :disabled="!canToggleChore(chore)"
                                 :aria-label="chore.done ? `Mark ${chore.name} as not done` : `Mark ${chore.name} as done`"
-                                class="mt-px grid h-[19px] w-[19px] flex-none place-items-center rounded-full border-[1.5px] text-[11px] text-[#0E1A2B]"
+                                class="mt-px grid h-[19px] w-[19px] flex-none place-items-center rounded-full border-[1.5px] text-[11px] text-[#0E1A2B] disabled:cursor-not-allowed"
                                 :style="tickStyle(chore.done)"
-                                @click.stop="toggle(chore.id)"
+                                @click.stop="toggle(chore)"
                             >
                                 {{ chore.done ? '✓' : '' }}
                             </button>
@@ -268,5 +290,12 @@ function destroy(): void {
                 </form>
             </DialogContent>
         </Dialog>
+
+        <ConfirmDialog
+            :open="confirmOpen"
+            message="Delete this chore?"
+            @update:open="confirmOpen = $event"
+            @confirm="confirmDestroy"
+        />
     </HouseHubLayout>
 </template>

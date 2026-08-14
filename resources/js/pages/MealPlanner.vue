@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useHouseholdRole } from '@/composables/useHouseholdRole';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { tint } from '@/lib/househub';
 import type { Member, PlannedMeal, PlannerDay, Recipe } from '@/types/househub';
@@ -17,6 +19,8 @@ defineProps<{
 }>();
 
 const SLOTS = ['breakfast', 'lunch', 'dinner'];
+
+const { canManage } = useHouseholdRole();
 
 const draggingId = ref<number | null>(null);
 const dropTarget = ref<string | null>(null);
@@ -80,10 +84,22 @@ function submit(): void {
     }
 }
 
+const confirmOpen = ref(false);
+
 function destroy(): void {
-    if (editing.value === null || !confirm('Remove this meal from the plan?')) {
+    if (editing.value === null) {
         return;
     }
+
+    confirmOpen.value = true;
+}
+
+function confirmDestroy(): void {
+    if (editing.value === null) {
+        return;
+    }
+
+    confirmOpen.value = false;
 
     router.delete(route('meals.destroy', { meal: editing.value.id }), {
         preserveScroll: true,
@@ -121,7 +137,7 @@ function drop(date: string): void {
 <template>
     <HouseHubLayout title="Meal Planner" :subtitle="`Week of ${weekOf}`">
         <div class="flex animate-hh-rise flex-col gap-4">
-            <div class="text-[13px] text-hh-ink3">Drag any meal card onto another day to reschedule, or click one to edit it.</div>
+            <div v-if="canManage" class="text-[13px] text-hh-ink3">Drag any meal card onto another day to reschedule, or click one to edit it.</div>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                 <div
@@ -140,6 +156,7 @@ function drop(date: string): void {
                         <span class="text-[13px] font-extrabold">{{ day.dayLabel }}</span>
                         <span class="font-mono text-[11px] text-hh-ink3">{{ day.dateLabel }}</span>
                         <button
+                            v-if="canManage"
                             type="button"
                             class="ml-auto grid h-[22px] w-[22px] place-items-center rounded-md text-hh-ink3 opacity-0 transition hover:bg-hh-soft hover:text-hh-ink focus-visible:opacity-100 group-hover:opacity-100"
                             :aria-label="`Add a meal on ${day.dateLabel}`"
@@ -153,12 +170,13 @@ function drop(date: string): void {
                         v-for="meal in day.meals"
                         :key="meal.id"
                         type="button"
-                        draggable="true"
-                        class="cursor-grab overflow-hidden rounded-2xl border border-hh-line bg-hh-card text-left transition hover:-translate-y-[3px] hover:shadow-hh"
+                        :draggable="canManage"
+                        class="overflow-hidden rounded-2xl border border-hh-line bg-hh-card text-left transition hover:-translate-y-[3px] hover:shadow-hh"
+                        :class="canManage ? 'cursor-grab' : ''"
                         :style="{ opacity: draggingId === meal.id ? 0.35 : 1 }"
                         @dragstart="startDrag($event, meal.id)"
                         @dragend="endDrag"
-                        @click="openEdit(meal, day.date)"
+                        @click="canManage && openEdit(meal, day.date)"
                     >
                         <div class="relative flex h-[76px] items-end px-3 py-2.5" :style="{ background: tint(meal.tint) }">
                             <span class="absolute right-2.5 top-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-hh-ontint opacity-60">
@@ -294,5 +312,12 @@ function drop(date: string): void {
                 </form>
             </DialogContent>
         </Dialog>
+
+        <ConfirmDialog
+            :open="confirmOpen"
+            message="Remove this meal from the plan?"
+            @update:open="confirmOpen = $event"
+            @confirm="confirmDestroy"
+        />
     </HouseHubLayout>
 </template>

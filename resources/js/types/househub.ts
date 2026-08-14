@@ -255,6 +255,30 @@ export interface House {
     settings: HouseSetting[];
 }
 
+export interface DocumentFolder {
+    id: number;
+    name: string;
+    icon: string;
+    colour: string;
+    /** The `Palette` case name, for the colour picker. */
+    colourKey: string;
+    count: number;
+}
+
+export interface Document {
+    id: number;
+    name: string;
+    extension: string;
+    /** e.g. "2.4 MB · 12 Mar 2026". */
+    meta: string;
+    tags: string[];
+    /** e.g. "19 Nov 2027", or null if the document has no expiry set. */
+    expiryLabel: string | null;
+    /** True when `expiryLabel` is within 60 days. */
+    isUrgent: boolean;
+    addedBy: Member | null;
+}
+
 export interface Dashboard {
     greeting: string;
     dateLine: string;

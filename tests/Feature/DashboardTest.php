@@ -91,4 +91,35 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page->where('dashboard.weather', null));
     }
+
+    #[Test]
+    public function itSkipsAnEmptyFirstListInFavourOfOneWithItems(): void
+    {
+        $household = Household::factory()->create();
+        $user = User::factory()->create(['household_id' => $household->id]);
+
+        ShoppingList::factory()->create(['household_id' => $household->id, 'name' => 'Empty one', 'position' => 0]);
+        $withItems = ShoppingList::factory()->create(['household_id' => $household->id, 'name' => 'Has stuff', 'position' => 1]);
+        ShoppingItem::factory()->create(['shopping_list_id' => $withItems->id]);
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('dashboard.shoppingList.name', 'Has stuff'));
+    }
+
+    #[Test]
+    public function itShowsTheEmptyStateWhenEveryListIsEmpty(): void
+    {
+        $household = Household::factory()->create();
+        $user = User::factory()->create(['household_id' => $household->id]);
+
+        ShoppingList::factory()->create(['household_id' => $household->id]);
+        ShoppingList::factory()->create(['household_id' => $household->id]);
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('dashboard.shoppingList', null));
+    }
 }

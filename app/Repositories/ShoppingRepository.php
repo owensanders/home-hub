@@ -27,9 +27,12 @@ class ShoppingRepository implements ShoppingRepositoryInterface
         return $household->shoppingLists()->with('items')->where('slug', $slug)->first();
     }
 
+    /** Prefers a list that actually has items, so the dashboard doesn't spotlight an empty one. */
     public function defaultListFor(Household $household): ?ShoppingList
     {
-        return $household->shoppingLists()->with('items')->first();
+        $lists = $household->shoppingLists()->with('items')->get();
+
+        return $lists->first(fn (ShoppingList $list) => $list->items->isNotEmpty());
     }
 
     public function createList(Household $household, string $name, Palette $colour): ShoppingList

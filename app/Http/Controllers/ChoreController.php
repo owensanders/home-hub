@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Contracts\Repositories\HouseholdRepositoryInterface;
 use App\Data\MemberData;
 use App\Enums\ChoreStatus;
+use App\Enums\HouseholdRole;
 use App\Http\Requests\ChoreRequest;
 use App\Http\Requests\MoveChoreRequest;
 use App\Models\Chore;
@@ -67,6 +68,7 @@ class ChoreController extends Controller
     public function toggle(Request $request, Chore $chore, ToggleChoreUseCase $toggle): RedirectResponse
     {
         $this->assertOwned($request, $chore);
+        $this->assertCanToggle($request, $chore);
 
         $updated = $toggle->execute($chore);
 
@@ -86,5 +88,13 @@ class ChoreController extends Controller
     private function assertOwned(Request $request, Chore $chore): void
     {
         abort_if($chore->household_id !== $this->household($request)->id, 404);
+    }
+
+    /** Teen/Child can only tick off chores assigned to them; Owner/Adult can toggle any. */
+    private function assertCanToggle(Request $request, Chore $chore): void
+    {
+        $restricted = in_array($request->user()->role, [HouseholdRole::Teen, HouseholdRole::Child], true);
+
+        abort_if($restricted && $chore->assigned_to !== $request->user()->id, 403);
     }
 }
