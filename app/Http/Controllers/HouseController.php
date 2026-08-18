@@ -6,15 +6,17 @@ namespace App\Http\Controllers;
 
 use App\Enums\HouseholdRole;
 use App\Http\Requests\InviteRequest;
+use App\Http\Requests\JoinCodeToggleRequest;
 use App\Http\Requests\RoleRequest;
-use App\Http\Requests\SettingRequest;
 use App\Models\User;
 use App\Traits\ResolvesHouseholdTrait;
+use App\UseCases\House\ApproveMemberUseCase;
 use App\UseCases\House\ChangeMemberRoleUseCase;
 use App\UseCases\House\GetHouseUseCase;
 use App\UseCases\House\InviteMemberUseCase;
+use App\UseCases\House\RegenerateJoinCodeUseCase;
 use App\UseCases\House\RemoveMemberUseCase;
-use App\UseCases\House\ToggleHouseholdSettingUseCase;
+use App\UseCases\House\ToggleJoinCodeUseCase;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -47,6 +49,15 @@ class HouseController extends Controller
         return back()->with('toast', "{$updated->name} is now {$updated->role->label()}");
     }
 
+    public function approve(Request $request, User $member, ApproveMemberUseCase $approve): RedirectResponse
+    {
+        $this->assertOwned($request, $member);
+
+        $approved = $approve->execute($member);
+
+        return back()->with('toast', "{$approved->name} approved — welcome to the household");
+    }
+
     public function destroy(Request $request, User $member, RemoveMemberUseCase $remove): RedirectResponse
     {
         $this->assertOwned($request, $member);
@@ -58,11 +69,18 @@ class HouseController extends Controller
         return back()->with('toast', $wasPending ? "{$name} — invite cancelled" : "{$name} removed from the household");
     }
 
-    public function toggleSetting(SettingRequest $request, ToggleHouseholdSettingUseCase $toggle): RedirectResponse
+    public function toggleJoinCode(JoinCodeToggleRequest $request, ToggleJoinCodeUseCase $toggle): RedirectResponse
     {
-        $toggle->execute($this->household($request), (string) $request->validated('key'));
+        $toggle->execute($this->household($request), (bool) $request->validated('enabled'));
 
-        return back();
+        return back()->with('toast', $request->boolean('enabled') ? 'Invite code turned on' : 'Invite code turned off');
+    }
+
+    public function regenerateJoinCode(Request $request, RegenerateJoinCodeUseCase $regenerate): RedirectResponse
+    {
+        $regenerate->execute($this->household($request));
+
+        return back()->with('toast', 'New invite code generated');
     }
 
     private function assertOwned(Request $request, User $member): void
