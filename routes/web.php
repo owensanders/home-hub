@@ -17,7 +17,7 @@ use Inertia\Inertia;
 
 Route::get('/', fn () => Inertia::render('Welcome'))->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function (): void {
+Route::middleware(['auth', 'verified', 'household'])->group(function (): void {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // View-only screens every household role can see.
@@ -79,12 +79,6 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::patch('budget/income/{income}', [IncomeSourceController::class, 'update'])->name('budget.income.update');
         Route::delete('budget/income/{income}', [IncomeSourceController::class, 'destroy'])->name('budget.income.destroy');
 
-        Route::get('house', [HouseController::class, 'index'])->name('house.index');
-        Route::post('house/invite', [HouseController::class, 'invite'])->name('house.invite');
-        Route::patch('house/members/{member}/role', [HouseController::class, 'updateRole'])->name('house.members.role');
-        Route::delete('house/members/{member}', [HouseController::class, 'destroy'])->name('house.members.destroy');
-        Route::patch('house/settings', [HouseController::class, 'toggleSetting'])->name('house.settings.update');
-
         Route::get('documents/{folder?}', [DocumentController::class, 'index'])->name('documents.index');
         Route::post('document-folders', [DocumentController::class, 'storeFolder'])->name('documents.folders.store');
         Route::delete('document-folders/{folder}', [DocumentController::class, 'destroyFolder'])->name('documents.folders.destroy');
@@ -92,6 +86,19 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::patch('documents/{document}/move', [DocumentController::class, 'move'])->name('documents.move');
         Route::get('documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download');
         Route::delete('documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
+    });
+
+    // The House tab manages membership and household settings — Owner only.
+    // An Adult is otherwise Owner-equivalent (see role:owner,adult above),
+    // but must never be able to reach here, reassign roles, or remove people.
+    Route::middleware('role:owner')->group(function (): void {
+        Route::get('house', [HouseController::class, 'index'])->name('house.index');
+        Route::post('house/invite', [HouseController::class, 'invite'])->name('house.invite');
+        Route::patch('house/members/{member}/role', [HouseController::class, 'updateRole'])->name('house.members.role');
+        Route::patch('house/members/{member}/approve', [HouseController::class, 'approve'])->name('house.members.approve');
+        Route::delete('house/members/{member}', [HouseController::class, 'destroy'])->name('house.members.destroy');
+        Route::patch('house/join-code', [HouseController::class, 'toggleJoinCode'])->name('house.joinCode.toggle');
+        Route::post('house/join-code/regenerate', [HouseController::class, 'regenerateJoinCode'])->name('house.joinCode.regenerate');
     });
 });
 

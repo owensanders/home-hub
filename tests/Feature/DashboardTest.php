@@ -31,7 +31,7 @@ class DashboardTest extends TestCase
     {
         $user = User::factory()->create(['household_id' => null]);
 
-        $this->actingAs($user)->get('/dashboard')->assertForbidden();
+        $this->actingAs($user)->get('/dashboard')->assertRedirect(route('household.setup', absolute: false));
     }
 
     #[Test]

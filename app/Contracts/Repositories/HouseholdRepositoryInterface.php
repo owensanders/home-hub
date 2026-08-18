@@ -12,6 +12,14 @@ use Illuminate\Support\Collection;
 
 interface HouseholdRepositoryInterface
 {
+    /** @param  array<string, mixed>  $attributes */
+    public function create(array $attributes): Household;
+
+    /** @param  array<string, mixed>  $attributes */
+    public function update(Household $household, array $attributes): Household;
+
+    public function findByJoinCode(string $joinCode): ?Household;
+
     /** @return Collection<int, \App\Models\User> */
     public function members(Household $household): Collection;
 
@@ -20,7 +28,4 @@ interface HouseholdRepositoryInterface
 
     /** @return Collection<int, BudgetCategory> */
     public function budgetFor(Household $household, CarbonImmutable $month): Collection;
-
-    /** @param  array<string, bool>  $settings */
-    public function updateSettings(Household $household, array $settings): Household;
 }

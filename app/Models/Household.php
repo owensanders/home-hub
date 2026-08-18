@@ -7,14 +7,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
  * @property string $name
+ * @property string|null $join_code
+ * @property bool $join_code_enabled
  * @property string|null $location
  * @property string|null $address
  * @property int $streak_days
- * @property array<string, bool>|null $settings
  */
 class Household extends Model
 {
@@ -22,11 +24,34 @@ class Household extends Model
     use HasFactory;
 
     /** @var list<string> */
-    protected $fillable = ['name', 'location', 'address', 'streak_days', 'settings'];
+    protected $fillable = ['name', 'join_code', 'join_code_enabled', 'location', 'address', 'streak_days'];
 
     protected function casts(): array
     {
-        return ['streak_days' => 'integer', 'settings' => 'array'];
+        return ['streak_days' => 'integer', 'join_code_enabled' => 'boolean'];
+    }
+
+    protected static function booted(): void
+    {
+        // Every household needs a join code to be found by, whichever path
+        // created it — the wizard, a seeder, a factory in a test.
+        static::creating(function (Household $household): void {
+            if (blank($household->join_code)) {
+                $household->join_code = self::generateJoinCode($household->name);
+            }
+        });
+    }
+
+    public static function generateJoinCode(string $householdName): string
+    {
+        $letters = Str::of($householdName)->upper()->replaceMatches('/[^A-Z]/', '');
+        $prefix = $letters->isEmpty() ? 'HOME' : $letters->substr(0, 8)->value();
+
+        do {
+            $code = $prefix.'-'.Str::upper(Str::random(6));
+        } while (static::where('join_code', $code)->exists());
+
+        return $code;
     }
 
     /** @return HasMany<User, $this> */

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureHasHousehold;
 use App\Http\Middleware\EnsureHouseholdRole;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -19,7 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        $middleware->alias(['role' => EnsureHouseholdRole::class]);
+        $middleware->alias([
+            'role' => EnsureHouseholdRole::class,
+            'household' => EnsureHasHousehold::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

@@ -26,8 +26,16 @@ function removeMember(memberId: number): void {
     router.delete(route('house.members.destroy', { member: memberId }), { preserveScroll: true });
 }
 
-function toggleSetting(key: string): void {
-    router.patch(route('house.settings.update'), { key }, { preserveScroll: true });
+function approveMember(memberId: number): void {
+    router.patch(route('house.members.approve', { member: memberId }), {}, { preserveScroll: true });
+}
+
+function toggleJoinCode(): void {
+    router.patch(route('house.joinCode.toggle'), { enabled: !props.house.joinCodeEnabled }, { preserveScroll: true });
+}
+
+function regenerateJoinCode(): void {
+    router.post(route('house.joinCode.regenerate'), {}, { preserveScroll: true });
 }
 </script>
 
@@ -85,7 +93,7 @@ function toggleSetting(key: string): void {
                                     <span class="text-[15px] font-bold">{{ member.name }}</span>
                                     <span v-if="member.you" class="rounded-lg bg-hh-soft px-2 py-[3px] text-[11px] font-bold text-hh-ink2">You</span>
                                     <span v-if="member.pending" class="rounded-lg bg-hh-sun px-2 py-[3px] text-[11px] font-bold text-[#0E1A2B]">
-                                        Invite pending
+                                        {{ member.pendingReason === 'requested' ? 'Wants to join' : 'Invite pending' }}
                                     </span>
                                 </div>
                                 <div class="mt-1 text-[12.5px] text-hh-ink3">{{ member.email }} · {{ member.activity }}</div>
@@ -99,6 +107,15 @@ function toggleSetting(key: string): void {
                                     {{ option.label }}
                                 </option>
                             </select>
+                            <button
+                                v-if="member.pendingReason === 'requested'"
+                                type="button"
+                                title="Approve"
+                                class="h-[38px] w-[38px] flex-none rounded-[11px] text-sm text-hh-ink3 transition hover:bg-hh-soft hover:text-hh-mint"
+                                @click="approveMember(member.id)"
+                            >
+                                ✓
+                            </button>
                             <button
                                 type="button"
                                 title="Remove from household"
@@ -164,32 +181,41 @@ function toggleSetting(key: string): void {
                         </div>
                     </section>
 
-                    <!-- Household settings -->
+                    <!-- Invite code -->
                     <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
-                        <h3 class="mb-3 text-[15px] font-extrabold tracking-[-0.01em]">Household settings</h3>
-                        <div class="flex flex-col gap-0.5">
+                        <div class="flex items-center gap-3 rounded-2xl bg-hh-sunk p-3.5">
+                            <div class="min-w-0 flex-1 pr-3">
+                                <div class="text-[13px] font-semibold">Invite code</div>
+                                <div class="mt-0.5 text-[11.5px] text-hh-ink3">Share this so someone can join without an email invite.</div>
+                            </div>
                             <button
-                                v-for="setting in props.house.settings"
-                                :key="setting.key"
                                 type="button"
-                                class="flex min-h-[52px] w-full items-center gap-3 rounded-xl px-2 text-left transition-colors hover:bg-hh-soft"
-                                @click="toggleSetting(setting.key)"
+                                role="switch"
+                                :aria-checked="props.house.joinCodeEnabled"
+                                class="h-[26px] w-11 flex-none rounded-full p-[3px] transition-colors"
+                                :style="{ background: props.house.joinCodeEnabled ? 'var(--hh-mint)' : 'var(--hh-line)' }"
+                                @click="toggleJoinCode"
                             >
-                                <div class="min-w-0 flex-1">
-                                    <div class="text-[13.5px] font-semibold">{{ setting.title }}</div>
-                                    <div class="mt-0.5 text-[11.5px] text-hh-ink3">{{ setting.body }}</div>
-                                </div>
                                 <span
-                                    class="h-[26px] w-11 flex-none rounded-full p-[3px] transition-colors"
-                                    :style="{ background: setting.enabled ? 'var(--hh-mint)' : 'var(--hh-line)' }"
-                                >
-                                    <span
-                                        class="block h-5 w-5 rounded-full bg-white transition-transform"
-                                        :style="{ transform: setting.enabled ? 'translateX(18px)' : 'translateX(0)' }"
-                                    ></span>
-                                </span>
+                                    class="block h-5 w-5 rounded-full bg-white transition-transform"
+                                    :style="{ transform: props.house.joinCodeEnabled ? 'translateX(18px)' : 'translateX(0)' }"
+                                ></span>
                             </button>
                         </div>
+
+                        <div v-if="props.house.joinCodeEnabled" class="mt-3 flex items-center gap-2.5">
+                            <span class="flex-1 rounded-lg bg-hh-sunk px-3 py-1.5 font-mono text-[13px] font-bold tracking-wider text-hh-ink">
+                                {{ props.house.joinCode }}
+                            </span>
+                            <button
+                                type="button"
+                                class="flex-none rounded-lg border border-hh-line px-3 py-1.5 text-[12.5px] font-semibold text-hh-ink2 transition-colors hover:bg-hh-soft"
+                                @click="regenerateJoinCode"
+                            >
+                                Generate new code
+                            </button>
+                        </div>
+                        <div v-else class="mt-3 text-[12.5px] text-hh-ink3">Off — turn this on to get a shareable code.</div>
                     </section>
                 </div>
             </div>

@@ -14,6 +14,25 @@ use Illuminate\Support\Collection;
 
 class HouseholdRepository implements HouseholdRepositoryInterface
 {
+    /** @param  array<string, mixed>  $attributes */
+    public function create(array $attributes): Household
+    {
+        return Household::create($attributes);
+    }
+
+    /** @param  array<string, mixed>  $attributes */
+    public function update(Household $household, array $attributes): Household
+    {
+        $household->update($attributes);
+
+        return $household->refresh();
+    }
+
+    public function findByJoinCode(string $joinCode): ?Household
+    {
+        return Household::where('join_code', $joinCode)->first();
+    }
+
     /** @return Collection<int, User> */
     public function members(Household $household): Collection
     {
@@ -36,13 +55,5 @@ class HouseholdRepository implements HouseholdRepositoryInterface
         return $household->budgetCategories()
             ->whereDate('month', $month->startOfMonth()->toDateString())
             ->get();
-    }
-
-    /** @param  array<string, bool>  $settings */
-    public function updateSettings(Household $household, array $settings): Household
-    {
-        $household->update(['settings' => $settings]);
-
-        return $household;
     }
 }

@@ -32,6 +32,6 @@ class RegisteredUserController extends Controller
             $request->validated('password'),
         );
 
-        return to_route('dashboard');
+        return to_route('household.setup');
     }
 }

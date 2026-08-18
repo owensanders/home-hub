@@ -198,6 +198,7 @@ export interface IncomeSource {
     amount: string;
     amountPence: number;
     initials: string;
+    isRecurring: boolean;
 }
 
 export interface Weather {
@@ -227,6 +228,7 @@ export interface HouseMember {
     activity: string;
     you: boolean;
     pending: boolean;
+    pendingReason: 'invited' | 'requested' | null;
 }
 
 export interface HouseRole {
@@ -236,23 +238,17 @@ export interface HouseRole {
     count: number;
 }
 
-export interface HouseSetting {
-    key: string;
-    title: string;
-    body: string;
-    enabled: boolean;
-}
-
 export interface House {
     houseName: string;
     houseAddress: string;
     houseCreated: string;
+    joinCode: string;
+    joinCodeEnabled: boolean;
     houseStats: HouseStat[];
     memberCount: number;
     roleOptions: RoleOption[];
     members: HouseMember[];
     roles: HouseRole[];
-    settings: HouseSetting[];
 }
 
 export interface DocumentFolder {
