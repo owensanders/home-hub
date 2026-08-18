@@ -7,6 +7,7 @@ export function useHouseholdRole() {
     const user = computed(() => page.props.auth?.user ?? null);
     const role = computed(() => user.value?.role ?? null);
     const canManage = computed(() => role.value === 'owner' || role.value === 'adult');
+    const isOwner = computed(() => role.value === 'owner');
     const isTeen = computed(() => role.value === 'teen');
 
     // Teen/Child can only tick off chores assigned to them; Owner/Adult can toggle any.
@@ -14,5 +15,5 @@ export function useHouseholdRole() {
         return canManage.value || chore.assignee?.id === user.value?.id;
     }
 
-    return { user, role, canManage, isTeen, canToggleChore };
+    return { user, role, canManage, isOwner, isTeen, canToggleChore };
 }

@@ -13,7 +13,7 @@ const props = defineProps<{
 
 const page = usePage();
 const { appearance, updateAppearance } = useAppearance();
-const { user, canManage } = useHouseholdRole();
+const { user, canManage, isOwner } = useHouseholdRole();
 
 const isDark = computed(() => appearance.value === 'dark');
 
@@ -33,9 +33,11 @@ const nav = computed(() =>
         { label: 'Meal Planner', icon: '🍽', route: 'meals.index' },
         { label: 'Shopping Lists', icon: '🛒', route: 'shopping.index' },
         { label: 'Chores', icon: '✅', route: 'chores.index' },
-        // Budget, House, and Documents involve money or household administration — Owner/Adult only.
+        // Budget and Documents involve money or sensitive records — Owner/Adult only.
         canManage.value ? { label: 'Budget', icon: '💰', route: 'budget.index' } : null,
-        canManage.value ? { label: 'House', icon: '🏡', route: 'house.index' } : null,
+        // House manages membership and household settings — Owner only, so an
+        // Adult can never reassign roles or remove people (including the owner).
+        isOwner.value ? { label: 'House', icon: '🏡', route: 'house.index' } : null,
         canManage.value ? { label: 'Documents', icon: '📂', route: 'documents.index' } : null,
         // Settings has three sub-pages, so match on the URL prefix rather than one route name.
         { label: 'Settings', icon: '⚙', route: 'profile.edit', prefix: '/settings' },

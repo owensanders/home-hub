@@ -36,7 +36,7 @@ enum HouseholdRole: string
     {
         return match ($this) {
             self::Owner => 'Full access, and the only role that can delete the household.',
-            self::Adult => 'Everything except removing the owner. Sees budget and documents.',
+            self::Adult => 'Runs day-to-day life — meals, chores, calendar, budget and documents. No access to household settings or membership.',
             self::Teen => 'Meals, shopping and chores to view; can manage the calendar, and tick off their own chores and shopping items.',
             self::Child => 'A simplified view: the family calendar, and ticking off their own chores.',
         };
