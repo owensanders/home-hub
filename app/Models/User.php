@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\HouseholdRole;
 use App\Enums\Palette;
+use App\Enums\PendingReason;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,7 @@ use Illuminate\Notifications\Notifiable;
  * @property string|null $status_line
  * @property \App\Enums\HouseholdRole $role
  * @property bool $pending
+ * @property \App\Enums\PendingReason|null $pending_reason
  * @property string $email
  * @property \Illuminate\Support\Carbon|null $email_verified_at
  * @property \Illuminate\Support\Carbon $created_at
@@ -42,6 +44,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'status_line',
         'role',
         'pending',
+        'pending_reason',
         'email',
         'password',
     ];
@@ -60,6 +63,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'colour' => Palette::class,
             'role' => HouseholdRole::class,
             'pending' => 'boolean',
+            'pending_reason' => PendingReason::class,
         ];
     }
 

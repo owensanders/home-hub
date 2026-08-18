@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\HouseholdRole;
+use App\Enums\PendingReason;
 use App\Models\CalendarEvent;
 use App\Models\Chore;
 use App\Models\Household;
@@ -58,13 +59,45 @@ class HouseTest extends TestCase
             'household_id' => $owner->household_id,
             'email' => 'margaret@parkerhouse.co.uk',
             'pending' => true,
+            'pending_reason' => 'invited',
         ]);
+    }
+
+    #[Test]
+    public function itApprovesAMemberWhoRequestedToJoin(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+        $requester = User::factory()->create([
+            'household_id' => $owner->household_id,
+            'pending' => true,
+            'pending_reason' => PendingReason::Requested,
+        ]);
+
+        $this->actingAs($owner)
+            ->patch("/house/members/{$requester->id}/approve")
+            ->assertRedirect()
+            ->assertSessionHas('toast', "{$requester->name} approved — welcome to the household");
+
+        $requester->refresh();
+        $this->assertFalse($requester->pending);
+        $this->assertNull($requester->pending_reason);
+    }
+
+    #[Test]
+    public function itDoesNotApproveAnotherHouseholdsMember(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+        $stranger = User::factory()->create(['pending' => true, 'pending_reason' => PendingReason::Requested]);
+
+        $this->actingAs($owner)->patch("/house/members/{$stranger->id}/approve")->assertNotFound();
+
+        $this->assertTrue($stranger->refresh()->pending);
     }
 
     #[Test]
     public function itRejectsAnInviteWithMissingFields(): void
     {
-        $owner = User::factory()->create();
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
 
         $this->actingAs($owner)
             ->post('/house/invite', ['name' => '', 'email' => '', 'role' => 'adult'])
@@ -86,6 +119,32 @@ class HouseTest extends TestCase
     }
 
     #[Test]
+    public function itRefusesToDemoteTheSoleOwner(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+
+        $this->actingAs($owner)
+            ->patch("/house/members/{$owner->id}/role", ['role' => 'adult'])
+            ->assertSessionHasErrors('role');
+
+        $this->assertSame(HouseholdRole::Owner, $owner->refresh()->role);
+    }
+
+    #[Test]
+    public function itAllowsDemotingAnOwnerWhenAnotherOwnerRemains(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+        User::factory()->create(['household_id' => $owner->household_id, 'role' => HouseholdRole::Owner]);
+
+        $this->actingAs($owner)
+            ->patch("/house/members/{$owner->id}/role", ['role' => 'adult'])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(HouseholdRole::Adult, $owner->refresh()->role);
+    }
+
+    #[Test]
     public function itRemovesAMember(): void
     {
         $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
@@ -97,6 +156,18 @@ class HouseTest extends TestCase
             ->assertSessionHas('toast', 'James Parker removed from the household');
 
         $this->assertDatabaseMissing('users', ['id' => $member->id]);
+    }
+
+    #[Test]
+    public function itRefusesToRemoveTheSoleOwner(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+
+        $this->actingAs($owner)
+            ->delete("/house/members/{$owner->id}")
+            ->assertSessionHasErrors('member');
+
+        $this->assertDatabaseHas('users', ['id' => $owner->id]);
     }
 
     #[Test]
@@ -169,17 +240,44 @@ class HouseTest extends TestCase
     }
 
     #[Test]
-    public function itTogglesAHouseholdSetting(): void
+    public function itTogglesTheInviteCodeOff(): void
     {
         $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
 
-        $this->actingAs($owner)->patch('/house/settings', ['key' => 'approve'])->assertRedirect();
+        $this->actingAs($owner)
+            ->patch('/house/join-code', ['enabled' => false])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Invite code turned off');
 
-        $this->assertTrue((bool) $owner->household->refresh()->settings['approve']);
+        $this->assertFalse($owner->household->refresh()->join_code_enabled);
+    }
 
-        $this->actingAs($owner)->patch('/house/settings', ['key' => 'approve'])->assertRedirect();
+    #[Test]
+    public function itTogglesTheInviteCodeBackOn(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+        $owner->household->update(['join_code_enabled' => false]);
 
-        $this->assertFalse((bool) $owner->household->refresh()->settings['approve']);
+        $this->actingAs($owner)
+            ->patch('/house/join-code', ['enabled' => true])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Invite code turned on');
+
+        $this->assertTrue($owner->household->refresh()->join_code_enabled);
+    }
+
+    #[Test]
+    public function itRegeneratesTheInviteCode(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+        $originalCode = $owner->household->join_code;
+
+        $this->actingAs($owner)
+            ->post('/house/join-code/regenerate')
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'New invite code generated');
+
+        $this->assertNotSame($originalCode, $owner->household->refresh()->join_code);
     }
 
     #[Test]

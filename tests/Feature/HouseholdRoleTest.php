@@ -173,10 +173,34 @@ class HouseholdRoleTest extends TestCase
             $user = User::factory()->create(['role' => $role]);
 
             $this->actingAs($user)->get('/budget')->assertOk();
-            $this->actingAs($user)->get('/house')->assertOk();
 
             $chore = Chore::factory()->create(['household_id' => $user->household_id, 'status' => ChoreStatus::Today]);
             $this->actingAs($user)->patch("/chores/{$chore->id}/toggle")->assertRedirect();
         }
+    }
+
+    #[Test]
+    public function onlyOwnerCanAccessTheHouseTab(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+        $this->actingAs($owner)->get('/house')->assertOk();
+
+        $adult = User::factory()->create(['household_id' => $owner->household_id, 'role' => HouseholdRole::Adult]);
+        $this->actingAs($adult)->get('/house')->assertForbidden();
+    }
+
+    #[Test]
+    public function anAdultCannotReassignOrRemoveTheOwner(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+        $adult = User::factory()->create(['household_id' => $owner->household_id, 'role' => HouseholdRole::Adult]);
+
+        $this->actingAs($adult)->patch("/house/members/{$owner->id}/role", ['role' => 'adult'])->assertForbidden();
+        $this->actingAs($adult)->patch("/house/members/{$adult->id}/role", ['role' => 'owner'])->assertForbidden();
+        $this->actingAs($adult)->delete("/house/members/{$owner->id}")->assertForbidden();
+        $this->actingAs($adult)->post('/house/invite', ['name' => 'Someone', 'email' => 'someone@example.com', 'role' => 'adult'])->assertForbidden();
+
+        $this->assertSame(HouseholdRole::Owner, $owner->refresh()->role);
+        $this->assertDatabaseHas('users', ['id' => $owner->id]);
     }
 }

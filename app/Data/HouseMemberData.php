@@ -20,6 +20,7 @@ class HouseMemberData extends Data
         public string $activity,
         public bool $you,
         public bool $pending,
+        public ?string $pendingReason,
     ) {}
 
     public static function fromModel(User $user, int $viewerId): self
@@ -35,6 +36,7 @@ class HouseMemberData extends Data
             activity: $user->status_line ?? '',
             you: $user->id === $viewerId,
             pending: $user->pending,
+            pendingReason: $user->pending_reason?->value,
         );
     }
 }

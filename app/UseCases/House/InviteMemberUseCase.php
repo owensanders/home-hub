@@ -8,6 +8,7 @@ use App\Contracts\Repositories\HouseholdRepositoryInterface;
 use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Enums\HouseholdRole;
 use App\Enums\Palette;
+use App\Enums\PendingReason;
 use App\Models\Household;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -35,6 +36,7 @@ class InviteMemberUseCase
             'colour' => $colour,
             'role' => HouseholdRole::from($attributes['role']),
             'pending' => true,
+            'pending_reason' => PendingReason::Invited,
             'email' => $attributes['email'],
             'password' => Str::random(40),
         ]);
