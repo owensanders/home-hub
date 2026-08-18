@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $meta
  * @property \App\Enums\Palette $colour
  * @property int $amount_pence
+ * @property bool $is_recurring
+ * @property \Illuminate\Support\Carbon $month
  * @property int $position
  */
 class IncomeSource extends Model
@@ -24,13 +26,15 @@ class IncomeSource extends Model
     use HasFactory;
 
     /** @var list<string> */
-    protected $fillable = ['household_id', 'label', 'meta', 'colour', 'amount_pence', 'position'];
+    protected $fillable = ['household_id', 'label', 'meta', 'colour', 'amount_pence', 'is_recurring', 'month', 'position'];
 
     protected function casts(): array
     {
         return [
             'colour' => Palette::class,
             'amount_pence' => 'integer',
+            'is_recurring' => 'boolean',
+            'month' => 'date',
         ];
     }
 

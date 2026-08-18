@@ -71,17 +71,25 @@ class BudgetRepository implements BudgetRepositoryInterface
     }
 
     /** @return Collection<int, IncomeSource> */
-    public function incomeSourcesFor(Household $household): Collection
+    public function incomeSourcesFor(Household $household, CarbonImmutable $month): Collection
     {
-        return $household->incomeSources()->get();
+        return $household->incomeSources()
+            ->whereDate('month', $month->startOfMonth()->toDateString())
+            ->get();
     }
 
     /** @param array<string, mixed> $attributes */
-    public function createIncomeSource(Household $household, array $attributes): IncomeSource
+    public function createIncomeSource(Household $household, CarbonImmutable $month, array $attributes): IncomeSource
     {
-        $position = (int) $household->incomeSources()->max('position') + 1;
+        $position = (int) $household->incomeSources()
+            ->whereDate('month', $month->startOfMonth()->toDateString())
+            ->max('position') + 1;
 
-        $income = $household->incomeSources()->create([...$attributes, 'position' => $position]);
+        $income = $household->incomeSources()->create([
+            ...$attributes,
+            'month' => $month->startOfMonth(),
+            'position' => $position,
+        ]);
 
         // create() doesn't hydrate DB-level defaults (e.g. `colour`) onto the
         // in-memory instance, so refresh before it's used to build a DTO.
@@ -99,5 +107,23 @@ class BudgetRepository implements BudgetRepositoryInterface
     public function deleteIncomeSource(IncomeSource $income): void
     {
         $income->delete();
+    }
+
+    /** @return Collection<int, IncomeSource> */
+    public function recurringIncomeSourcesBefore(Household $household, CarbonImmutable $month): Collection
+    {
+        $latestMonth = $household->incomeSources()
+            ->where('is_recurring', true)
+            ->whereDate('month', '<', $month->startOfMonth()->toDateString())
+            ->max('month');
+
+        if ($latestMonth === null) {
+            return collect();
+        }
+
+        return $household->incomeSources()
+            ->where('is_recurring', true)
+            ->whereDate('month', $latestMonth)
+            ->get();
     }
 }

@@ -20,7 +20,8 @@ class GetBudgetScreenUseCase
 
     public function __construct(
         private readonly BudgetRepositoryInterface $budget,
-        private readonly CarryForwardRecurringCategoriesUseCase $carryForward,
+        private readonly CarryForwardRecurringCategoriesUseCase $carryForwardCategories,
+        private readonly CarryForwardRecurringIncomeUseCase $carryForwardIncome,
     ) {}
 
     /**
@@ -37,10 +38,11 @@ class GetBudgetScreenUseCase
         $today = CarbonImmutable::today();
         $first = $month->startOfMonth();
 
-        $this->carryForward->execute($household, $first);
+        $this->carryForwardCategories->execute($household, $first);
+        $this->carryForwardIncome->execute($household, $first);
 
         $categories = $this->budget->categoriesFor($household, $first);
-        $income = $this->budget->incomeSourcesFor($household);
+        $income = $this->budget->incomeSourcesFor($household, $first);
 
         $budgeted = (int) $categories->sum('budgeted_pence');
         $incomeTotal = (int) $income->sum('amount_pence');

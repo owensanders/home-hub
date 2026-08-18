@@ -27,13 +27,16 @@ interface BudgetRepositoryInterface
     public function recurringCategoriesBefore(Household $household, CarbonImmutable $month): Collection;
 
     /** @return Collection<int, IncomeSource> */
-    public function incomeSourcesFor(Household $household): Collection;
+    public function incomeSourcesFor(Household $household, CarbonImmutable $month): Collection;
 
     /** @param array<string, mixed> $attributes */
-    public function createIncomeSource(Household $household, array $attributes): IncomeSource;
+    public function createIncomeSource(Household $household, CarbonImmutable $month, array $attributes): IncomeSource;
 
     /** @param array<string, mixed> $attributes */
     public function updateIncomeSource(IncomeSource $income, array $attributes): IncomeSource;
 
     public function deleteIncomeSource(IncomeSource $income): void;
+
+    /** @return Collection<int, IncomeSource> the nearest earlier month's recurring income, or empty if none */
+    public function recurringIncomeSourcesBefore(Household $household, CarbonImmutable $month): Collection;
 }

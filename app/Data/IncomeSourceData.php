@@ -18,6 +18,7 @@ class IncomeSourceData extends Data
         public string $amount,
         public int $amountPence,
         public string $initials,
+        public bool $isRecurring,
     ) {}
 
     public static function fromModel(IncomeSource $income): self
@@ -30,6 +31,7 @@ class IncomeSourceData extends Data
             amount: Money::format($income->amount_pence),
             amountPence: $income->amount_pence,
             initials: mb_strtoupper(mb_substr($income->label, 0, 2)),
+            isRecurring: $income->is_recurring,
         );
     }
 }

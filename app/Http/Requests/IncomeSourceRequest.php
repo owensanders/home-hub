@@ -15,6 +15,7 @@ class IncomeSourceRequest extends FormRequest
             'label' => ['required', 'string', 'max:60'],
             'meta' => ['nullable', 'string', 'max:60'],
             'amount' => ['required', 'numeric', 'min:0'],
+            'is_recurring' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -37,6 +38,7 @@ class IncomeSourceRequest extends FormRequest
             'label' => trim((string) $this->validated('label')),
             'meta' => $this->validated('meta'),
             'amount_pence' => (int) round(((float) $this->validated('amount')) * 100),
+            'is_recurring' => $this->boolean('is_recurring'),
         ];
     }
 }

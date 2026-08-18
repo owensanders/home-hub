@@ -203,6 +203,99 @@ class BudgetTest extends TestCase
     }
 
     #[Test]
+    public function itCreatesARecurringIncomeSource(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/budget/income', ['label' => 'Salary', 'amount' => '2480', 'is_recurring' => '1'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('income_sources', [
+            'household_id' => $user->household_id,
+            'label' => 'Salary',
+            'is_recurring' => true,
+        ]);
+    }
+
+    #[Test]
+    public function itCarriesForwardRecurringIncomeIntoAnEmptyMonth(): void
+    {
+        $user = User::factory()->create();
+        $thisMonth = CarbonImmutable::now()->startOfMonth();
+        $nextMonth = $thisMonth->addMonth();
+
+        IncomeSource::factory()->recurring()->create([
+            'household_id' => $user->household_id,
+            'label' => 'Salary',
+            'amount_pence' => 248000,
+            'month' => $thisMonth,
+        ]);
+        IncomeSource::factory()->create([
+            'household_id' => $user->household_id,
+            'label' => 'One-off bonus',
+            'month' => $thisMonth,
+        ]);
+
+        $this->actingAs($user)->get('/budget?month='.$nextMonth->format('Y-m'))->assertOk();
+
+        $this->assertDatabaseHas('income_sources', [
+            'household_id' => $user->household_id,
+            'label' => 'Salary',
+            'amount_pence' => 248000,
+            'is_recurring' => true,
+            'month' => $nextMonth->toDateString(),
+        ]);
+        $this->assertDatabaseMissing('income_sources', [
+            'household_id' => $user->household_id,
+            'label' => 'One-off bonus',
+            'month' => $nextMonth->toDateString(),
+        ]);
+    }
+
+    #[Test]
+    public function itDoesNotDuplicateCarriedIncomeOnRepeatedVisits(): void
+    {
+        $user = User::factory()->create();
+        $thisMonth = CarbonImmutable::now()->startOfMonth();
+        $nextMonth = $thisMonth->addMonth();
+
+        IncomeSource::factory()->recurring()->create([
+            'household_id' => $user->household_id,
+            'label' => 'Salary',
+            'month' => $thisMonth,
+        ]);
+
+        $this->actingAs($user)->get('/budget?month='.$nextMonth->format('Y-m'))->assertOk();
+        $this->actingAs($user)->get('/budget?month='.$nextMonth->format('Y-m'))->assertOk();
+
+        $this->assertDatabaseCount('income_sources', 2);
+    }
+
+    #[Test]
+    public function itCarriesForwardIncomeAcrossAGapMonth(): void
+    {
+        $user = User::factory()->create();
+        $thisMonth = CarbonImmutable::now()->startOfMonth();
+        $twoMonthsAhead = $thisMonth->addMonths(2);
+
+        IncomeSource::factory()->recurring()->create([
+            'household_id' => $user->household_id,
+            'label' => 'Salary',
+            'month' => $thisMonth,
+        ]);
+
+        // The month in between is never visited, so it's genuinely empty.
+        $this->actingAs($user)->get('/budget?month='.$twoMonthsAhead->format('Y-m'))->assertOk();
+
+        $this->assertDatabaseHas('income_sources', [
+            'household_id' => $user->household_id,
+            'label' => 'Salary',
+            'month' => $twoMonthsAhead->toDateString(),
+        ]);
+    }
+
+    #[Test]
     public function itCarriesForwardRecurringCategoriesIntoAnEmptyMonth(): void
     {
         $user = User::factory()->create();

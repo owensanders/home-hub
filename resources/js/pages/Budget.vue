@@ -47,12 +47,12 @@ const incomeOpen = ref(false);
 const editingIncome = ref<IncomeSource | null>(null);
 const incomeDialogTitle = computed(() => (editingIncome.value ? 'Edit income source' : 'New income source'));
 
-const incomeForm = useForm({ label: '', meta: '', amount: '' });
+const incomeForm = useForm({ label: '', meta: '', amount: '', is_recurring: false as boolean });
 
 function openNewIncome(): void {
     editingIncome.value = null;
     incomeForm.clearErrors();
-    incomeForm.defaults({ label: '', meta: '', amount: '' });
+    incomeForm.defaults({ label: '', meta: '', amount: '', is_recurring: false });
     incomeForm.reset();
     incomeOpen.value = true;
 }
@@ -64,6 +64,7 @@ function openEditIncome(income: IncomeSource): void {
         label: income.label,
         meta: income.meta ?? '',
         amount: (income.amountPence / 100).toString(),
+        is_recurring: income.isRecurring,
     });
     incomeForm.reset();
     incomeOpen.value = true;
@@ -75,7 +76,7 @@ function submitIncome(): void {
     if (editingIncome.value) {
         incomeForm.patch(route('budget.income.update', { income: editingIncome.value.id }), options);
     } else {
-        incomeForm.post(route('budget.income.store'), options);
+        incomeForm.post(route('budget.income.store', { month: props.month }), options);
     }
 }
 
@@ -201,6 +202,10 @@ function addCategory(): void {
                         <div class="text-[11px] font-bold uppercase tracking-[0.09em] text-hh-onhero2">Money in</div>
                         <div class="mt-1.5 text-[22px] font-extrabold tracking-[-0.03em]">{{ incomeTotal }}</div>
                     </div>
+                    <div class="flex-1 rounded-2xl border border-hh-heroline bg-hh-herofilm p-4">
+                        <div class="text-[11px] font-bold uppercase tracking-[0.09em] text-hh-onhero2">Money out</div>
+                        <div class="mt-1.5 text-[22px] font-extrabold tracking-[-0.03em]">{{ budgetedLabel }}</div>
+                    </div>
                 </div>
             </section>
 
@@ -273,7 +278,10 @@ function addCategory(): void {
                                 {{ source.initials }}
                             </span>
                             <div class="min-w-0 flex-1">
-                                <div class="text-[13.5px] font-semibold">{{ source.label }}</div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[13.5px] font-semibold">{{ source.label }}</span>
+                                    <Repeat v-if="source.isRecurring" title="Repeats every month" class="h-3 w-3 flex-none text-hh-ink3" />
+                                </div>
                                 <div v-if="source.meta" class="mt-0.5 text-[11.5px] text-hh-ink3">{{ source.meta }}</div>
                             </div>
                             <span class="font-mono text-[13px]">{{ source.amount }}</span>
@@ -424,6 +432,11 @@ function addCategory(): void {
                             <p v-if="incomeForm.errors.amount" class="text-[12.5px] text-hh-coral">{{ incomeForm.errors.amount }}</p>
                         </div>
                     </div>
+
+                    <label class="flex items-center gap-1.5 text-[12px] text-hh-ink3">
+                        <input v-model="incomeForm.is_recurring" type="checkbox" class="h-3.5 w-3.5" />
+                        Repeat this every month
+                    </label>
 
                     <div class="flex items-center gap-2">
                         <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="incomeForm.processing">
