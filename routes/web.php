@@ -56,6 +56,8 @@ Route::middleware(['auth', 'verified', 'household'])->group(function (): void {
         Route::post('recipes', [RecipeController::class, 'store'])->name('recipes.store');
         Route::patch('recipes/{recipe}', [RecipeController::class, 'update'])->name('recipes.update');
         Route::delete('recipes/{recipe}', [RecipeController::class, 'destroy'])->name('recipes.destroy');
+        Route::post('recipes/{recipe}/add-to-shopping-list', [RecipeController::class, 'addToShoppingList'])
+            ->name('recipes.addToShoppingList');
 
         Route::post('shopping/{slug}/items', [ShoppingListController::class, 'store'])->name('shopping.items.store');
         Route::patch('shopping-items/{item}', [ShoppingListController::class, 'updateItem'])->name('shopping.items.update');

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\ShoppingCategory;
 use App\Models\ShoppingItem;
 use App\Models\ShoppingList;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -21,7 +20,6 @@ class ShoppingItemFactory extends Factory
             'shopping_list_id' => ShoppingList::factory(),
             'name' => $this->faker->word(),
             'quantity' => 'x1',
-            'category' => $this->faker->randomElement(ShoppingCategory::cases()),
             'completed_at' => null,
             'position' => 0,
         ];

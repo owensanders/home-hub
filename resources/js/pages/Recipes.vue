@@ -1,19 +1,29 @@
 <script setup lang="ts">
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import RecipeDetailFields from '@/components/househub/RecipeDetailFields.vue';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useAddIngredientsToShoppingList } from '@/composables/useAddIngredientsToShoppingList';
 import { useHouseholdRole } from '@/composables/useHouseholdRole';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { tint } from '@/lib/househub';
-import type { Recipe } from '@/types/househub';
+import type { Recipe, ShoppingList, TagOption } from '@/types/househub';
 import { router, useForm } from '@inertiajs/vue3';
 import { Plus, Star } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
-defineProps<{ recipes: Recipe[] }>();
-
-const TINTS = [0, 1, 2, 3, 4];
+const props = defineProps<{ recipes: Recipe[]; tagOptions: TagOption[]; shoppingLists: ShoppingList[] }>();
 
 const { canManage } = useHouseholdRole();
+
+// Drops any tag not in tagOptions — e.g. legacy/seeded values that predate
+// the fixed tag list — since there's no checkbox to deselect them and
+// re-submitting them as-is would fail validation with no visible error.
+function validTags(tags: string[]): string[] {
+    return tags.filter((tag) => props.tagOptions.some((option) => option.value === tag));
+}
+
+const HANDLED_ERROR_KEYS = ['name', 'description'];
+const hasUnhandledErrors = computed(() => Object.keys(form.errors).some((key) => !HANDLED_ERROR_KEYS.includes(key)));
 
 const open = ref(false);
 const editing = ref<Recipe | null>(null);
@@ -23,24 +33,29 @@ const form = useForm({
     description: '',
     duration_label: '',
     difficulty: '',
-    tags: '',
+    tags: [] as string[],
+    ingredients: [] as { name: string; quantity: string }[],
     tint: 0,
     is_favourite: false as boolean,
+    shopping_list_id: null as number | null,
 });
 
 const dialogTitle = computed(() => (editing.value ? 'Edit recipe' : 'New recipe'));
 
 function openNew(): void {
     editing.value = null;
+    selectedListId.value = null;
     form.clearErrors();
     form.defaults({
         name: '',
         description: '',
         duration_label: '',
         difficulty: '',
-        tags: '',
+        tags: [],
+        ingredients: [],
         tint: 0,
         is_favourite: false,
+        shopping_list_id: null,
     });
     form.reset();
     open.value = true;
@@ -48,15 +63,18 @@ function openNew(): void {
 
 function openEdit(recipe: Recipe): void {
     editing.value = recipe;
+    selectedListId.value = null;
     form.clearErrors();
     form.defaults({
         name: recipe.name,
         description: recipe.description ?? '',
         duration_label: recipe.durationLabel ?? '',
         difficulty: recipe.difficulty ?? '',
-        tags: recipe.tags.join(', '),
+        tags: validTags(recipe.tags),
+        ingredients: recipe.ingredients.map((i) => ({ name: i.name, quantity: i.quantity ?? '' })),
         tint: recipe.tint,
         is_favourite: recipe.isFavourite,
+        shopping_list_id: null,
     });
     form.reset();
     open.value = true;
@@ -72,10 +90,7 @@ function submit(): void {
 
     form.transform((data) => ({
         ...data,
-        tags: data.tags
-            .split(',')
-            .map((tag) => tag.trim())
-            .filter(Boolean),
+        ingredients: data.ingredients.filter((ingredient) => ingredient.name.trim() !== ''),
     }));
 
     if (editing.value) {
@@ -83,6 +98,16 @@ function submit(): void {
     } else {
         form.post(route('recipes.store'), options);
     }
+}
+
+const { selectedListId, addIngredientsToList } = useAddIngredientsToShoppingList();
+
+function submitAddIngredients(): void {
+    if (editing.value === null) {
+        return;
+    }
+
+    addIngredientsToList(editing.value.id);
 }
 
 const confirmOpen = ref(false);
@@ -159,22 +184,15 @@ function confirmDestroy(): void {
                         <p v-if="form.errors.name" class="text-[12.5px] text-hh-coral">{{ form.errors.name }}</p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="flex flex-col gap-1.5">
-                            <label for="duration_label" class="hh-label">Duration</label>
-                            <input id="duration_label" v-model="form.duration_label" type="text" class="hh-input" placeholder="30 min" />
-                        </div>
-
-                        <div class="flex flex-col gap-1.5">
-                            <label for="difficulty" class="hh-label">Difficulty</label>
-                            <input id="difficulty" v-model="form.difficulty" type="text" class="hh-input" placeholder="Easy" />
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col gap-1.5">
-                        <label for="tags" class="hh-label">Tags</label>
-                        <input id="tags" v-model="form.tags" type="text" class="hh-input" placeholder="Comma separated, e.g. veggie, quick" />
-                    </div>
+                    <RecipeDetailFields
+                        v-model:duration-label="form.duration_label"
+                        v-model:difficulty="form.difficulty"
+                        v-model:tags="form.tags"
+                        v-model:ingredients="form.ingredients"
+                        v-model:tint="form.tint"
+                        v-model:is-favourite="form.is_favourite"
+                        :tag-options="tagOptions"
+                    />
 
                     <div class="flex flex-col gap-1.5">
                         <label for="description" class="hh-label">Notes</label>
@@ -189,27 +207,33 @@ function confirmDestroy(): void {
                         <p v-if="form.errors.description" class="text-[12.5px] text-hh-coral">{{ form.errors.description }}</p>
                     </div>
 
-                    <div class="flex flex-col gap-1.5">
-                        <span class="hh-label">Colour</span>
-                        <div class="flex gap-2">
-                            <button
-                                v-for="t in TINTS"
-                                :key="t"
-                                type="button"
-                                :aria-label="`Colour ${t + 1}`"
-                                :aria-pressed="form.tint === t"
-                                class="h-7 w-7 rounded-[9px] transition"
-                                :class="form.tint === t ? 'ring-2 ring-hh-ink ring-offset-2 ring-offset-hh-card' : ''"
-                                :style="{ background: tint(t) }"
-                                @click="form.tint = t"
-                            ></button>
-                        </div>
+                    <div v-if="editing && editing.ingredients.length > 0" class="flex items-center gap-2 border-t border-hh-line pt-4">
+                        <select v-model="selectedListId" class="hh-input">
+                            <option :value="null">Add ingredients to…</option>
+                            <option v-for="list in shoppingLists" :key="list.id" :value="list.id">{{ list.name }}</option>
+                        </select>
+                        <button
+                            type="button"
+                            class="hh-btn w-auto bg-hh-soft text-hh-ink"
+                            :disabled="selectedListId === null"
+                            @click="submitAddIngredients"
+                        >
+                            Add to list
+                        </button>
                     </div>
 
-                    <label for="is_favourite" class="flex items-center gap-2.5 text-[13px] text-hh-ink2">
-                        <input id="is_favourite" v-model="form.is_favourite" type="checkbox" class="h-4 w-4 accent-hh-coral" />
-                        Show in the planner's quick-pick favourites
-                    </label>
+                    <div
+                        v-if="!editing && form.ingredients.some((i) => i.name.trim() !== '')"
+                        class="flex flex-col gap-1.5 border-t border-hh-line pt-4"
+                    >
+                        <label for="shopping_list_id" class="hh-label">Also add ingredients to a shopping list</label>
+                        <select id="shopping_list_id" v-model="form.shopping_list_id" class="hh-input">
+                            <option :value="null">Don't add</option>
+                            <option v-for="list in shoppingLists" :key="list.id" :value="list.id">{{ list.name }}</option>
+                        </select>
+                    </div>
+
+                    <p v-if="hasUnhandledErrors" class="text-[12.5px] text-hh-coral">Couldn't save — check the recipe details above.</p>
 
                     <div class="flex items-center gap-2">
                         <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="form.processing">

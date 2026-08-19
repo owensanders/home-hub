@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\PlannedMeal;
 use App\Models\Recipe;
+use App\Models\ShoppingList;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -176,6 +177,96 @@ class MealPlannerTest extends TestCase
             'description' => 'Beef, all the trimmings',
         ]);
         $this->assertDatabaseHas('planned_meals', ['household_id' => $user->household_id, 'planned_on' => '2026-08-07']);
+    }
+
+    #[Test]
+    public function itAddsAMealWithANewRecipeIncludingFullDetails(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/meals', [
+                'new_recipe_name' => 'Veg curry',
+                'new_recipe_duration_label' => '40 min',
+                'new_recipe_difficulty' => 'Medium',
+                'new_recipe_tags' => ['vegetarian', 'spicy'],
+                'new_recipe_ingredients' => [
+                    ['name' => 'Chickpeas', 'quantity' => '1 tin'],
+                    ['name' => 'Coconut milk', 'quantity' => null],
+                ],
+                'new_recipe_tint' => 2,
+                'new_recipe_is_favourite' => true,
+                'planned_on' => '2026-08-07',
+                'slot' => 'dinner',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Veg curry added');
+
+        $recipe = Recipe::where('name', 'Veg curry')->sole();
+        $this->assertSame('40 min', $recipe->duration_label);
+        $this->assertSame(['vegetarian', 'spicy'], $recipe->tags);
+        $this->assertSame('Chickpeas', $recipe->ingredients[0]['name']);
+        $this->assertTrue($recipe->is_favourite);
+    }
+
+    #[Test]
+    public function itUpdatesTheSelectedExistingRecipesDetailsWhenAddingAMeal(): void
+    {
+        $user = User::factory()->create();
+        $recipe = Recipe::factory()->create([
+            'household_id' => $user->household_id,
+            'name' => 'Fish tacos',
+            'duration_label' => '20 min',
+        ]);
+
+        $this->actingAs($user)
+            ->post('/meals', [
+                'recipe_id' => $recipe->id,
+                'new_recipe_duration_label' => '25 min',
+                'new_recipe_ingredients' => [['name' => 'Cod fillets', 'quantity' => '400g']],
+                'planned_on' => '2026-08-07',
+                'slot' => 'dinner',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Fish tacos added');
+
+        $recipe->refresh();
+        $this->assertSame('25 min', $recipe->duration_label);
+        $this->assertSame('Cod fillets', $recipe->ingredients[0]['name']);
+    }
+
+    #[Test]
+    public function itPushesIngredientsToAShoppingListWhenAddingAMeal(): void
+    {
+        $user = User::factory()->create();
+        $list = ShoppingList::factory()->create(['household_id' => $user->household_id]);
+
+        $this->actingAs($user)
+            ->post('/meals', [
+                'new_recipe_name' => 'Veg curry',
+                'new_recipe_ingredients' => [['name' => 'Chickpeas', 'quantity' => '1 tin']],
+                'new_recipe_shopping_list_id' => $list->id,
+                'planned_on' => '2026-08-07',
+                'slot' => 'dinner',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('shopping_items', ['shopping_list_id' => $list->id, 'name' => 'Chickpeas', 'quantity' => '1 tin']);
+    }
+
+    #[Test]
+    public function itRejectsADuplicateNewRecipeNameInTheSameHousehold(): void
+    {
+        $user = User::factory()->create();
+        Recipe::factory()->create(['household_id' => $user->household_id, 'name' => 'Fish tacos']);
+
+        $this->actingAs($user)
+            ->post('/meals', [
+                'new_recipe_name' => 'Fish tacos',
+                'planned_on' => '2026-08-07',
+                'slot' => 'dinner',
+            ])
+            ->assertSessionHasErrors('new_recipe_name');
     }
 
     #[Test]

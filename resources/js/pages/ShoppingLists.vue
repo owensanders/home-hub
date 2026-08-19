@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useHouseholdRole } from '@/composables/useHouseholdRole';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { tickStyle } from '@/lib/househub';
-import type { ShoppingGroup, ShoppingItem, ShoppingList } from '@/types/househub';
+import type { ShoppingItem, ShoppingList } from '@/types/househub';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -12,16 +12,14 @@ import { computed, ref } from 'vue';
 const props = defineProps<{
     lists: ShoppingList[];
     active: ShoppingList | null;
-    groups: ShoppingGroup[];
 }>();
 
 const COLOURS = ['mint', 'lilac', 'sun', 'sky', 'coral'];
-const CATEGORIES = ['fruit', 'vegetables', 'fresh', 'frozen', 'bakery', 'household'];
 
 const { canManage, isTeen } = useHouseholdRole();
 const canToggleItems = computed(() => canManage.value || isTeen.value);
 
-const draft = useForm({ name: '' });
+const draft = useForm({ name: '', quantity: '' });
 
 function addItem(): void {
     if (!props.active || draft.name.trim() === '') {
@@ -90,12 +88,12 @@ function destroyActiveList(): void {
 const itemDialogOpen = ref(false);
 const editingItem = ref<ShoppingItem | null>(null);
 
-const itemForm = useForm({ name: '', quantity: '', category: 'fresh' });
+const itemForm = useForm({ name: '', quantity: '' });
 
 function openEditItem(item: ShoppingItem): void {
     editingItem.value = item;
     itemForm.clearErrors();
-    itemForm.defaults({ name: item.name, quantity: item.quantity ?? '', category: item.category });
+    itemForm.defaults({ name: item.name, quantity: item.quantity ?? '' });
     itemForm.reset();
     itemDialogOpen.value = true;
 }
@@ -200,6 +198,12 @@ function confirmDestroy(): void {
                         aria-label="Add to this list"
                         class="h-12 flex-1 rounded-[14px] border border-hh-line bg-hh-sunk px-4 text-[14.5px] text-hh-ink placeholder:text-hh-ink3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hh-coral"
                     />
+                    <input
+                        v-model="draft.quantity"
+                        placeholder="Qty"
+                        aria-label="Quantity"
+                        class="h-12 w-20 rounded-[14px] border border-hh-line bg-hh-sunk px-3 text-[14.5px] text-hh-ink placeholder:text-hh-ink3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hh-coral"
+                    />
                     <button
                         type="submit"
                         :disabled="draft.processing"
@@ -210,41 +214,38 @@ function confirmDestroy(): void {
                 </form>
                 <p v-if="draft.errors.name" class="-mt-2 mb-3 text-[13px] text-hh-coral">{{ draft.errors.name }}</p>
 
-                <div class="grid grid-cols-1 gap-x-7 gap-y-2.5 md:grid-cols-2">
-                    <div v-for="group in groups" :key="group.label">
-                        <div class="mb-1 mt-2 text-[11px] font-bold uppercase tracking-[0.09em] text-hh-ink3">{{ group.label }}</div>
-                        <div v-for="item in group.items" :key="item.id" class="group relative">
-                            <button
-                                type="button"
-                                :disabled="!canToggleItems"
-                                class="flex min-h-[46px] w-full items-center gap-3 rounded-[13px] px-2.5 pr-8 text-left transition-colors hover:bg-hh-soft disabled:cursor-not-allowed"
-                                @click="toggleItem(item.id)"
+                <div class="flex flex-col gap-0.5">
+                    <div v-for="item in active.items" :key="item.id" class="group relative">
+                        <button
+                            type="button"
+                            :disabled="!canToggleItems"
+                            class="flex min-h-[46px] w-full items-center gap-3 rounded-[13px] px-2.5 pr-8 text-left transition-colors hover:bg-hh-soft disabled:cursor-not-allowed"
+                            @click="toggleItem(item.id)"
+                        >
+                            <span
+                                class="grid h-[22px] w-[22px] flex-none place-items-center rounded-lg border-[1.5px] text-xs text-[#0E1A2B] transition"
+                                :style="tickStyle(item.done)"
                             >
-                                <span
-                                    class="grid h-[22px] w-[22px] flex-none place-items-center rounded-lg border-[1.5px] text-xs text-[#0E1A2B] transition"
-                                    :style="tickStyle(item.done)"
-                                >
-                                    {{ item.done ? '✓' : '' }}
-                                </span>
-                                <span class="flex-1 text-[14.5px]" :class="item.done ? 'text-hh-ink3 line-through' : 'text-hh-ink'">
-                                    {{ item.name }}
-                                </span>
-                                <span class="font-mono text-[11.5px] text-hh-ink3">{{ item.quantity }}</span>
-                            </button>
-                            <button
-                                v-if="canManage"
-                                type="button"
-                                aria-label="Edit item"
-                                class="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 transition group-hover:opacity-100"
-                                @click.stop="openEditItem(item)"
-                            >
-                                <Pencil class="h-3.5 w-3.5 text-hh-ink3" />
-                            </button>
-                        </div>
+                                {{ item.done ? '✓' : '' }}
+                            </span>
+                            <span class="flex-1 text-[14.5px]" :class="item.done ? 'text-hh-ink3 line-through' : 'text-hh-ink'">
+                                {{ item.name }}
+                            </span>
+                            <span class="font-mono text-[11.5px] text-hh-ink3">{{ item.quantity }}</span>
+                        </button>
+                        <button
+                            v-if="canManage"
+                            type="button"
+                            aria-label="Edit item"
+                            class="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 transition group-hover:opacity-100"
+                            @click.stop="openEditItem(item)"
+                        >
+                            <Pencil class="h-3.5 w-3.5 text-hh-ink3" />
+                        </button>
                     </div>
                 </div>
 
-                <p v-if="groups.length === 0" class="py-10 text-center text-sm text-hh-ink3">This list is empty.</p>
+                <p v-if="active.items.length === 0" class="py-10 text-center text-sm text-hh-ink3">This list is empty.</p>
             </div>
         </div>
 
@@ -304,18 +305,9 @@ function confirmDestroy(): void {
                         <p v-if="itemForm.errors.name" class="text-[12.5px] text-hh-coral">{{ itemForm.errors.name }}</p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="flex flex-col gap-1.5">
-                            <label for="item-quantity" class="hh-label">Quantity</label>
-                            <input id="item-quantity" v-model="itemForm.quantity" type="text" class="hh-input" placeholder="x1" />
-                        </div>
-
-                        <div class="flex flex-col gap-1.5">
-                            <label for="item-category" class="hh-label">Aisle</label>
-                            <select id="item-category" v-model="itemForm.category" class="hh-input">
-                                <option v-for="category in CATEGORIES" :key="category" :value="category">{{ category }}</option>
-                            </select>
-                        </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="item-quantity" class="hh-label">Quantity</label>
+                        <input id="item-quantity" v-model="itemForm.quantity" type="text" class="hh-input" placeholder="x1" />
                     </div>
 
                     <div class="flex items-center gap-2">

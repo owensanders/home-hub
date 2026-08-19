@@ -42,12 +42,18 @@ class MealPlanRepository implements MealPlanRepositoryInterface
         return $meal->refresh();
     }
 
+    private const NEW_RECIPE_KEYS = [
+        'new_recipe_name', 'new_recipe_description', 'new_recipe_duration_label',
+        'new_recipe_difficulty', 'new_recipe_tags', 'new_recipe_ingredients',
+        'new_recipe_tint', 'new_recipe_is_favourite', 'new_recipe_shopping_list_id',
+    ];
+
     /** @param  array<string, mixed>  $attributes */
     public function create(Household $household, array $attributes): PlannedMeal
     {
         return DB::transaction(function () use ($household, $attributes) {
             $attributes['recipe_id'] = $this->resolveRecipeId($household, $attributes);
-            unset($attributes['new_recipe_name'], $attributes['new_recipe_description']);
+            $attributes = array_diff_key($attributes, array_flip(self::NEW_RECIPE_KEYS));
 
             $meal = $household->plannedMeals()->create($attributes);
 
@@ -60,7 +66,7 @@ class MealPlanRepository implements MealPlanRepositoryInterface
     {
         return DB::transaction(function () use ($meal, $attributes) {
             $attributes['recipe_id'] = $this->resolveRecipeId($meal->household, $attributes);
-            unset($attributes['new_recipe_name'], $attributes['new_recipe_description']);
+            $attributes = array_diff_key($attributes, array_flip(self::NEW_RECIPE_KEYS));
 
             $meal->update($attributes);
 
@@ -119,13 +125,26 @@ class MealPlanRepository implements MealPlanRepositoryInterface
     /** @param  array<string, mixed>  $attributes */
     private function resolveRecipeId(Household $household, array $attributes): int
     {
+        $details = [
+            'description' => $attributes['new_recipe_description'] ?? null,
+            'duration_label' => $attributes['new_recipe_duration_label'] ?? null,
+            'difficulty' => $attributes['new_recipe_difficulty'] ?? null,
+            'tags' => $attributes['new_recipe_tags'] ?? [],
+            'ingredients' => $attributes['new_recipe_ingredients'] ?? [],
+            'tint' => $attributes['new_recipe_tint'] ?? 0,
+            'is_favourite' => $attributes['new_recipe_is_favourite'] ?? false,
+        ];
+
         if (! empty($attributes['recipe_id'])) {
-            return (int) $attributes['recipe_id'];
+            $recipe = $household->recipes()->findOrFail($attributes['recipe_id']);
+            $this->updateRecipe($recipe, $details);
+
+            return $recipe->id;
         }
 
-        return $household->recipes()->create([
+        return $this->createRecipe($household, [
             'name' => trim((string) $attributes['new_recipe_name']),
-            'description' => $attributes['new_recipe_description'] ?? null,
+            ...$details,
         ])->id;
     }
 }

@@ -6,7 +6,6 @@ namespace App\Repositories;
 
 use App\Contracts\Repositories\ShoppingRepositoryInterface;
 use App\Enums\Palette;
-use App\Enums\ShoppingCategory;
 use App\Models\Household;
 use App\Models\ShoppingItem;
 use App\Models\ShoppingList;
@@ -56,19 +55,18 @@ class ShoppingRepository implements ShoppingRepositoryInterface
         $list->delete();
     }
 
-    public function addItem(ShoppingList $list, string $name, ?string $quantity, ShoppingCategory $category): ShoppingItem
+    public function addItem(ShoppingList $list, string $name, ?string $quantity): ShoppingItem
     {
         return $list->items()->create([
             'name' => $name,
             'quantity' => $quantity,
-            'category' => $category,
             'position' => (int) $list->items()->max('position') + 1,
         ]);
     }
 
-    public function updateItem(ShoppingItem $item, string $name, ?string $quantity, ShoppingCategory $category): ShoppingItem
+    public function updateItem(ShoppingItem $item, string $name, ?string $quantity): ShoppingItem
     {
-        $item->update(['name' => $name, 'quantity' => $quantity, 'category' => $category]);
+        $item->update(['name' => $name, 'quantity' => $quantity]);
 
         return $item->refresh();
     }

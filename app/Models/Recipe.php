@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $duration_label
  * @property string|null $difficulty
  * @property list<string>|null $tags
+ * @property list<array{name: string, quantity: string|null}>|null $ingredients
  * @property int $tint
  * @property bool $is_favourite
  */
@@ -27,13 +28,14 @@ class Recipe extends Model
     /** @var list<string> */
     protected $fillable = [
         'household_id', 'name', 'description', 'duration_label',
-        'difficulty', 'tags', 'tint', 'is_favourite',
+        'difficulty', 'tags', 'ingredients', 'tint', 'is_favourite',
     ];
 
     protected function casts(): array
     {
         return [
             'tags' => 'array',
+            'ingredients' => 'array',
             'tint' => 'integer',
             'is_favourite' => 'boolean',
         ];

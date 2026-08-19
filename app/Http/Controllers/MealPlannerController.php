@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\RecipeTag;
 use App\Http\Requests\IndexMealPlannerRequest;
 use App\Http\Requests\PlannedMealRequest;
 use App\Http\Requests\RescheduleMealRequest;
@@ -14,6 +15,7 @@ use App\UseCases\Meals\DeletePlannedMealUseCase;
 use App\UseCases\Meals\GetMealPlannerUseCase;
 use App\UseCases\Meals\RescheduleMealUseCase;
 use App\UseCases\Meals\UpdatePlannedMealUseCase;
+use App\UseCases\Shopping\GetShoppingListOptionsUseCase;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,14 +26,22 @@ class MealPlannerController extends Controller
 {
     use ResolvesHouseholdTrait;
 
-    public function index(IndexMealPlannerRequest $request, GetMealPlannerUseCase $getMealPlanner): Response
-    {
+    public function index(
+        IndexMealPlannerRequest $request,
+        GetMealPlannerUseCase $getMealPlanner,
+        GetShoppingListOptionsUseCase $getShoppingLists,
+    ): Response {
         $week = $request->validated('week');
+        $household = $this->household($request);
 
-        return Inertia::render('MealPlanner', $getMealPlanner->execute(
-            $this->household($request),
-            $week !== null ? CarbonImmutable::createFromFormat('!Y-m-d', $week) : CarbonImmutable::now(),
-        ));
+        return Inertia::render('MealPlanner', [
+            ...$getMealPlanner->execute(
+                $household,
+                $week !== null ? CarbonImmutable::createFromFormat('!Y-m-d', $week) : CarbonImmutable::now(),
+            ),
+            'shoppingLists' => $getShoppingLists->execute($household),
+            'tagOptions' => RecipeTag::options(),
+        ]);
     }
 
     public function store(PlannedMealRequest $request, AddPlannedMealUseCase $add): RedirectResponse

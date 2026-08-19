@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\PlannedMeal;
 use App\Models\Recipe;
+use App\Models\ShoppingList;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -38,7 +39,7 @@ class RecipeTest extends TestCase
                 'name' => 'Veg lasagne',
                 'duration_label' => '45 min',
                 'difficulty' => 'Medium',
-                'tags' => ['veggie'],
+                'tags' => ['vegetarian'],
                 'tint' => 2,
                 'is_favourite' => true,
             ])
@@ -112,5 +113,67 @@ class RecipeTest extends TestCase
             ->assertNotFound();
 
         $this->assertDatabaseHas('recipes', ['id' => $recipe->id]);
+    }
+
+    #[Test]
+    public function itAddsARecipesIngredientsToAShoppingList(): void
+    {
+        $user = User::factory()->create();
+        $recipe = Recipe::factory()->create([
+            'household_id' => $user->household_id,
+            'ingredients' => [
+                ['name' => 'Chicken breast', 'quantity' => '500g'],
+                ['name' => 'Lemon', 'quantity' => null],
+            ],
+        ]);
+        $list = ShoppingList::factory()->create(['household_id' => $user->household_id]);
+
+        $this->actingAs($user)
+            ->post("/recipes/{$recipe->id}/add-to-shopping-list", ['shopping_list_id' => $list->id])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('shopping_items', ['shopping_list_id' => $list->id, 'name' => 'Chicken breast', 'quantity' => '500g']);
+        $this->assertDatabaseHas('shopping_items', ['shopping_list_id' => $list->id, 'name' => 'Lemon']);
+    }
+
+    #[Test]
+    public function itAddsIngredientsToAListWhenCreatingARecipe(): void
+    {
+        $user = User::factory()->create();
+        $list = ShoppingList::factory()->create(['household_id' => $user->household_id]);
+
+        $this->actingAs($user)
+            ->post('/recipes', [
+                'name' => 'Veg curry',
+                'ingredients' => [['name' => 'Chickpeas', 'quantity' => '1 tin']],
+                'shopping_list_id' => $list->id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Veg curry added');
+
+        $this->assertDatabaseHas('shopping_items', ['shopping_list_id' => $list->id, 'name' => 'Chickpeas', 'quantity' => '1 tin']);
+    }
+
+    #[Test]
+    public function itRejectsADuplicateRecipeNameInTheSameHousehold(): void
+    {
+        $user = User::factory()->create();
+        Recipe::factory()->create(['household_id' => $user->household_id, 'name' => 'BBQ burgers']);
+
+        $this->actingAs($user)
+            ->post('/recipes', ['name' => 'BBQ burgers'])
+            ->assertSessionHasErrors('name');
+    }
+
+    #[Test]
+    public function itAllowsTheSameRecipeNameInADifferentHousehold(): void
+    {
+        $user = User::factory()->create();
+        $stranger = User::factory()->create();
+        Recipe::factory()->create(['household_id' => $stranger->household_id, 'name' => 'BBQ burgers']);
+
+        $this->actingAs($user)
+            ->post('/recipes', ['name' => 'BBQ burgers'])
+            ->assertSessionDoesntHaveErrors('name');
     }
 }

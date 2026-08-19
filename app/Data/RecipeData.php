@@ -9,7 +9,10 @@ use Spatie\LaravelData\Data;
 
 class RecipeData extends Data
 {
-    /** @param list<string> $tags */
+    /**
+     * @param  list<string>  $tags
+     * @param  list<array{name: string, quantity: string|null}>  $ingredients
+     */
     public function __construct(
         public int $id,
         public string $name,
@@ -19,6 +22,7 @@ class RecipeData extends Data
         public ?string $difficulty,
         public int $tint,
         public array $tags,
+        public array $ingredients,
         public bool $isFavourite,
     ) {}
 
@@ -33,6 +37,7 @@ class RecipeData extends Data
             difficulty: $recipe->difficulty,
             tint: $recipe->tint,
             tags: $recipe->tags ?? [],
+            ingredients: $recipe->ingredients ?? [],
             isFavourite: $recipe->is_favourite,
         );
     }

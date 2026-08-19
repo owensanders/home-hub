@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Contracts\Repositories;
 
 use App\Enums\Palette;
-use App\Enums\ShoppingCategory;
 use App\Models\Household;
 use App\Models\ShoppingItem;
 use App\Models\ShoppingList;
@@ -26,9 +25,9 @@ interface ShoppingRepositoryInterface
 
     public function deleteList(ShoppingList $list): void;
 
-    public function addItem(ShoppingList $list, string $name, ?string $quantity, ShoppingCategory $category): ShoppingItem;
+    public function addItem(ShoppingList $list, string $name, ?string $quantity): ShoppingItem;
 
-    public function updateItem(ShoppingItem $item, string $name, ?string $quantity, ShoppingCategory $category): ShoppingItem;
+    public function updateItem(ShoppingItem $item, string $name, ?string $quantity): ShoppingItem;
 
     public function deleteItem(ShoppingItem $item): void;
 

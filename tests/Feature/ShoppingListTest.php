@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Enums\ShoppingCategory;
 use App\Models\ShoppingItem;
 use App\Models\ShoppingList;
 use App\Models\User;
@@ -15,26 +14,6 @@ use Tests\TestCase;
 class ShoppingListTest extends TestCase
 {
     use RefreshDatabase;
-
-    #[Test]
-    public function itGroupsItemsByAisleInEnumOrderAndSkipsEmptyAisles(): void
-    {
-        $user = User::factory()->create();
-        $list = ShoppingList::factory()->create(['household_id' => $user->household_id, 'slug' => 'tesco']);
-
-        ShoppingItem::factory()->create(['shopping_list_id' => $list->id, 'category' => ShoppingCategory::Household]);
-        ShoppingItem::factory()->create(['shopping_list_id' => $list->id, 'category' => ShoppingCategory::Fruit]);
-
-        $this->actingAs($user)
-            ->get('/shopping/tesco')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->component('ShoppingLists')
-                ->where('groups.0.label', 'Fruit')
-                ->where('groups.1.label', 'Household')
-                ->count('groups', 2)
-            );
-    }
 
     #[Test]
     public function itFallsBackToTheFirstListWhenNoSlugIsGiven(): void
@@ -175,17 +154,16 @@ class ShoppingListTest extends TestCase
     {
         $user = User::factory()->create();
         $list = ShoppingList::factory()->create(['household_id' => $user->household_id]);
-        $item = ShoppingItem::factory()->create(['shopping_list_id' => $list->id, 'name' => 'Milk', 'category' => ShoppingCategory::Fresh]);
+        $item = ShoppingItem::factory()->create(['shopping_list_id' => $list->id, 'name' => 'Milk']);
 
         $this->actingAs($user)
-            ->patch("/shopping-items/{$item->id}", ['name' => 'Oat milk', 'quantity' => 'x2', 'category' => 'frozen'])
+            ->patch("/shopping-items/{$item->id}", ['name' => 'Oat milk', 'quantity' => 'x2'])
             ->assertRedirect()
             ->assertSessionHas('toast');
 
         $item->refresh();
         $this->assertSame('Oat milk', $item->name);
         $this->assertSame('x2', $item->quantity);
-        $this->assertSame(ShoppingCategory::Frozen, $item->category);
     }
 
     #[Test]

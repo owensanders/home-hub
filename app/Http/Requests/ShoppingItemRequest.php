@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Enums\ShoppingCategory;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class ShoppingItemRequest extends FormRequest
 {
@@ -16,7 +14,6 @@ class ShoppingItemRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:120'],
             'quantity' => ['nullable', 'string', 'max:40'],
-            'category' => ['nullable', Rule::enum(ShoppingCategory::class)],
         ];
     }
 

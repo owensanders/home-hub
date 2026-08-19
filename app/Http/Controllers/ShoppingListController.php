@@ -99,7 +99,6 @@ class ShoppingListController extends Controller
             $item,
             (string) $request->validated('name'),
             $request->validated('quantity'),
-            $request->validated('category'),
         );
 
         return back()->with('toast', "“{$updated->name}” updated");

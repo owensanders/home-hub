@@ -8,7 +8,6 @@ use App\Enums\ChoreStatus;
 use App\Enums\HouseholdRole;
 use App\Enums\MealSlot;
 use App\Enums\Palette;
-use App\Enums\ShoppingCategory;
 use App\Models\Household;
 use App\Models\Recipe;
 use App\Models\ShoppingList;
@@ -87,34 +86,34 @@ class HouseHubSeeder extends Seeder
     {
         $lists = [
             ['Tesco', Palette::Mint, [
-                ['Chicken thighs', '1kg', ShoppingCategory::Fresh, false],
-                ['New potatoes', '750g', ShoppingCategory::Vegetables, false],
-                ['Lemons', 'x3', ShoppingCategory::Fruit, true],
-                ['Oat milk', 'x2', ShoppingCategory::Fresh, false],
-                ['Frozen peas', '1 bag', ShoppingCategory::Frozen, false],
-                ['Sourdough', '1 loaf', ShoppingCategory::Bakery, false],
-                ['Kitchen roll', 'x4', ShoppingCategory::Household, true],
-                ['Bin bags', '1 box', ShoppingCategory::Household, false],
-                ['Bananas', 'x6', ShoppingCategory::Fruit, false],
-                ['Fish fingers', 'x12', ShoppingCategory::Frozen, false],
+                ['Chicken thighs', '1kg', false],
+                ['New potatoes', '750g', false],
+                ['Lemons', 'x3', true],
+                ['Oat milk', 'x2', false],
+                ['Frozen peas', '1 bag', false],
+                ['Sourdough', '1 loaf', false],
+                ['Kitchen roll', 'x4', true],
+                ['Bin bags', '1 box', false],
+                ['Bananas', 'x6', false],
+                ['Fish fingers', 'x12', false],
             ]],
             ['Aldi', Palette::Sky, [
-                ['Greek yoghurt', 'x2', ShoppingCategory::Fresh, false],
-                ['Carrots', '1kg', ShoppingCategory::Vegetables, false],
-                ['Croissants', 'x6', ShoppingCategory::Bakery, true],
+                ['Greek yoghurt', 'x2', false],
+                ['Carrots', '1kg', false],
+                ['Croissants', 'x6', true],
             ]],
             ['Costco', Palette::Lilac, [
-                ['Washing tabs', 'x60', ShoppingCategory::Household, false],
-                ['Coffee beans', '2kg', ShoppingCategory::Fresh, false],
+                ['Washing tabs', 'x60', false],
+                ['Coffee beans', '2kg', false],
             ]],
             ['DIY', Palette::Coral, [
-                ['Masking tape', 'x2', ShoppingCategory::Household, false],
-                ['Filler', '1 tub', ShoppingCategory::Household, true],
-                ['Sandpaper', 'x5', ShoppingCategory::Household, false],
+                ['Masking tape', 'x2', false],
+                ['Filler', '1 tub', true],
+                ['Sandpaper', 'x5', false],
             ]],
             ['Christmas', Palette::Sun, [
-                ['Wrapping paper', 'x4', ShoppingCategory::Household, false],
-                ['Mince pies', 'x2', ShoppingCategory::Bakery, false],
+                ['Wrapping paper', 'x4', false],
+                ['Mince pies', 'x2', false],
             ]],
         ];
 
@@ -127,11 +126,10 @@ class HouseHubSeeder extends Seeder
                 'position' => $position,
             ]);
 
-            foreach ($items as $itemPosition => [$itemName, $quantity, $category, $done]) {
+            foreach ($items as $itemPosition => [$itemName, $quantity, $done]) {
                 $list->items()->create([
                     'name' => $itemName,
                     'quantity' => $quantity,
-                    'category' => $category,
                     'completed_at' => $done ? now() : null,
                     'position' => $itemPosition,
                 ]);

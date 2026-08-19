@@ -16,8 +16,6 @@ export interface ShoppingItem {
     id: number;
     name: string;
     quantity: string | null;
-    /** Raw `ShoppingCategory` enum value, e.g. 'fresh'. */
-    category: string;
     done: boolean;
 }
 
@@ -30,11 +28,6 @@ export interface ShoppingList {
     colourKey: string;
     remaining: number;
     total: number;
-    items: ShoppingItem[];
-}
-
-export interface ShoppingGroup {
-    label: string;
     items: ShoppingItem[];
 }
 
@@ -98,6 +91,11 @@ export interface PlannerDay {
     meals: PlannedMeal[];
 }
 
+export interface RecipeIngredient {
+    name: string;
+    quantity: string | null;
+}
+
 export interface Recipe {
     id: number;
     name: string;
@@ -107,7 +105,13 @@ export interface Recipe {
     difficulty: string | null;
     tint: number;
     tags: string[];
+    ingredients: RecipeIngredient[];
     isFavourite: boolean;
+}
+
+export interface TagOption {
+    value: string;
+    label: string;
 }
 
 export interface AgendaEntry {
