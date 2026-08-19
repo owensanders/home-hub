@@ -75,21 +75,7 @@ class DashboardTest extends TestCase
                 ->where('dashboard.choreProgress.total', 3)
                 ->where('dashboard.choreProgress.done', 1)
                 ->where('dashboard.choreProgress.percentage', 33)
-                ->where('dashboard.weather.location', 'Bristol')
             );
-    }
-
-    #[Test]
-    public function itHidesTheWeatherPanelWhenNoForecastIsConfigured(): void
-    {
-        config(['household.weather' => null]);
-
-        $user = User::factory()->create();
-
-        $this->actingAs($user)
-            ->get('/dashboard')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('dashboard.weather', null));
     }
 
     #[Test]

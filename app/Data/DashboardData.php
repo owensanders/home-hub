@@ -19,7 +19,6 @@ class DashboardData extends Data
         public string $summaryLine,
         public int $streakDays,
         public array $family,
-        public ?WeatherData $weather,
         public ?PlannedMealData $tonight,
         public ?ShoppingListData $shoppingList,
         public array $chores,

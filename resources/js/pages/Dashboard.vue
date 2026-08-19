@@ -80,17 +80,6 @@ function toggleChore(chore: Chore): void {
                         </div>
                     </div>
                 </div>
-
-                <div
-                    v-if="dashboard.weather"
-                    class="relative flex w-full flex-none flex-col justify-between gap-3 rounded-[18px] border border-hh-heroline bg-hh-herofilm p-[18px] lg:w-[180px]"
-                >
-                    <div class="text-[11px] font-bold uppercase tracking-[0.09em] text-hh-onhero2">
-                        {{ dashboard.weather.location }}
-                    </div>
-                    <div class="font-serif text-[46px] leading-none">{{ dashboard.weather.temperature }}</div>
-                    <div class="text-[13px] text-hh-onhero2">{{ dashboard.weather.summary }}</div>
-                </div>
             </section>
 
             <div class="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[1.45fr_1fr]">

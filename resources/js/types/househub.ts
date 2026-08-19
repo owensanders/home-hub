@@ -201,12 +201,6 @@ export interface IncomeSource {
     isRecurring: boolean;
 }
 
-export interface Weather {
-    location: string;
-    temperature: string;
-    summary: string;
-}
-
 export interface HouseStat {
     label: string;
     value: string;
@@ -281,7 +275,6 @@ export interface Dashboard {
     summaryLine: string;
     streakDays: number;
     family: Member[];
-    weather: Weather | null;
     tonight: PlannedMeal | null;
     shoppingList: ShoppingList | null;
     chores: Chore[];

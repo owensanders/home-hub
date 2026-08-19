@@ -18,7 +18,6 @@ use App\Data\DashboardData;
 use App\Data\MemberData;
 use App\Data\PlannedMealData;
 use App\Data\ShoppingListData;
-use App\Data\WeatherData;
 use App\Enums\ChoreStatus;
 use App\Enums\MealSlot;
 use App\Models\BudgetCategory;
@@ -69,7 +68,6 @@ class GetDashboardUseCase
             ),
             streakDays: $household->streak_days,
             family: $this->households->members($household)->map(MemberData::fromModel(...))->values()->all(),
-            weather: $this->weather($household),
             tonight: $tonight !== null ? PlannedMealData::fromModel($tonight) : null,
             shoppingList: $list !== null ? ShoppingListData::fromModel($list) : null,
             chores: $todays->map(ChoreData::fromModel(...))->values()->all(),
@@ -100,23 +98,6 @@ class GetDashboardUseCase
         $parts[] = $choresLeft.' '.Str::plural('chore', $choresLeft).' left';
 
         return implode(' · ', $parts);
-    }
-
-    private function weather(Household $household): ?WeatherData
-    {
-        // ponytail: static forecast from config — swap for a real provider call
-        // (and cache it) when the weather actually needs to be right.
-        $forecast = config('household.weather');
-
-        if (! is_array($forecast) || $household->location === null) {
-            return null;
-        }
-
-        return new WeatherData(
-            location: $household->location,
-            temperature: (string) $forecast['temperature'],
-            summary: (string) $forecast['summary'],
-        );
     }
 
     /**
