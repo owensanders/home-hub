@@ -66,11 +66,12 @@ const pillars = [
 ];
 
 const secondary = [
-    { icon: '💰', title: 'Budget', body: 'Household spend by category, month to month.' },
-    { icon: '📂', title: 'Documents', body: 'Insurance, MOTs, tenancy, all searchable.' },
-    { icon: '🛡', title: 'Warranties', body: 'Receipts and expiry dates in one place.' },
-    { icon: '✅', title: 'Chores', body: 'Rotas, streaks and a bit of friendly rivalry.' },
-    { icon: '🏡', title: 'Home file', body: 'Meter readings, paint codes, boiler model.' },
+    { icon: '💰', title: 'Budgeting', body: 'Household spend by category, month to month.' },
+    { icon: '📂', title: 'Documents', body: 'A searchable vault for insurance, MOTs and tenancy paperwork.' },
+    { icon: '✅', title: 'Chores', body: 'Streaks and a bit of friendly rivalry.' },
+    { icon: '🔑', title: 'Guest access', body: 'Give cleaners, sitters or other helpers their own login.' },
+    { icon: '✨', title: 'AI insights', body: 'Smart meal planning and household insights, automatically.' },
+    { icon: '🏘', title: 'Multiple properties', body: 'Landlords and multi-home households, all under one login.' },
 ];
 
 type Plan = {
@@ -90,49 +91,55 @@ const plans: Plan[] = [
         name: 'Free',
         price: { monthly: '£0', annual: '£0' },
         per: { monthly: 'forever', annual: 'forever' },
-        sub: 'The daily three, for up to 4 people.',
+        sub: 'Everything you need for the everyday running of your home.',
         cta: 'Create your household',
-        note: 'No card. No trial clock.',
+        note: 'Perfect for getting your household organised.',
         features: [
             { text: 'Meal planner and recipe library', included: true },
-            { text: 'Shared calendar for the household', included: true },
-            { text: '2 shopping lists, live-synced', included: true },
-            { text: 'Chores, rotas and streaks', included: true },
-            { text: 'Up to 4 household members', included: true },
-            { text: 'Budget, documents and warranties', included: false },
+            { text: 'Shared household calendar', included: true },
+            { text: 'Shopping lists', included: true },
+            { text: 'Chores and streaks', included: true },
+            { text: 'Up to 2 household members', included: true },
+            { text: 'Household dashboard', included: true },
         ],
     },
     {
         name: 'Home',
-        price: { monthly: '£3.99', annual: '£39' },
+        price: { monthly: '£6.99', annual: '£69.99' },
         per: { monthly: '/month', annual: '/year' },
-        sub: 'Everything the house runs on, in one place.',
-        cta: 'Start free, upgrade later',
-        note: 'Cancel any time; your data stays readable.',
-        tag: 'Most useful',
+        sub: 'Run your whole household together, with everything in one place.',
+        cta: 'Start free, upgrade anytime',
+        note: 'No card required. Cancel anytime.',
+        tag: 'MOST POPULAR',
         highlight: true,
         features: [
             { text: 'Everything in Free', included: true },
-            { text: 'Unlimited members and shopping lists', included: true },
-            { text: 'Household budget and bill tracking', included: true },
-            { text: 'Document vault with 20GB storage', included: true },
-            { text: 'Warranty and expiry reminders', included: true },
+            { text: 'Unlimited household members', included: true },
+            { text: 'Unlimited shopping lists', included: true },
+            { text: 'Document vault with 5GB storage', included: true },
+            { text: 'Home budgeting', included: true },
+            { text: 'Basic budget insights', included: true },
+            { text: '2 AI meal plans per month', included: true },
         ],
     },
     {
         name: 'Home Plus',
-        price: { monthly: '£6.99', annual: '£69' },
+        price: { monthly: '£12.99', annual: '£129.99' },
         per: { monthly: '/month', annual: '/year' },
-        sub: 'For multi-property or larger households.',
-        cta: 'Talk to us',
-        note: 'Landlords, second homes, shared houses.',
+        sub: 'Let your home do more of the work.',
+        cta: 'Choose Home Plus',
+        note: 'For larger households, multiple properties and people who want the admin to take care of itself.',
+        tag: 'PREMIUM',
         features: [
             { text: 'Everything in Home', included: true },
             { text: 'Multiple properties under one login', included: true },
-            { text: '100GB storage and version history', included: true },
+            { text: '25GB document storage', included: true },
+            { text: 'Receipt/document scanning', included: true },
+            { text: 'AI-powered household insights', included: true },
+            { text: 'AI meal planning and shopping assistance', included: true },
             { text: 'Export everything as PDF or CSV', included: true },
-            { text: 'Guest access for cleaners or sitters', included: true },
-            { text: 'Priority support from a human', included: true },
+            { text: 'Guest access for cleaners, sitters or other helpers', included: true },
+            { text: 'Priority human support', included: true },
         ],
     },
 ];
@@ -396,6 +403,17 @@ function startRegistration(): void {
                 </div>
             </section>
 
+            <!-- Calendar joke -->
+            <section class="px-5 pb-[72px] sm:px-8 lg:px-14">
+                <div class="rounded-[22px] border border-hh-line bg-hh-card px-6 py-8 text-center sm:py-10">
+                    <p class="text-[13px] font-bold uppercase tracking-[0.08em] text-hh-ink3">Old family motto</p>
+                    <p class="mt-2.5 text-pretty text-2xl font-black tracking-[-0.02em] sm:text-3xl">
+                        "If it's not on the calendar, it's not happening."
+                    </p>
+                    <p class="mt-3 text-[14.5px] text-hh-ink2">Neither is dinner, apparently. Ask us how we know.</p>
+                </div>
+            </section>
+
             <!-- Everything else -->
             <section
                 id="features"
@@ -408,7 +426,7 @@ function startRegistration(): void {
                     <div>
                         <h2 class="text-[30px] font-black leading-tight tracking-[-0.03em] sm:text-4xl">Then it holds everything else</h2>
                         <p class="mt-3.5 text-pretty text-base leading-relaxed text-hh-onhero2">
-                            Budgets, documents, warranties, boiler services. Nobody signs up for a filing cabinet — but once HouseHub is the app you
+                            Budgets, documents, guest access, AI insights. Nobody signs up for a filing cabinet — but once HouseHub is the app you
                             already open every morning, the boring things finally have a home.
                         </p>
                         <Link
@@ -437,10 +455,10 @@ function startRegistration(): void {
             <section id="pricing" class="px-5 pb-6 pt-[76px] sm:px-8 lg:px-14">
                 <div class="mb-6 flex flex-col gap-5 sm:flex-row sm:items-end">
                     <div>
-                        <h2 class="text-[28px] font-black tracking-[-0.03em] sm:text-[34px]">Free where it counts</h2>
+                        <h2 class="text-[28px] font-black tracking-[-0.03em] sm:text-[34px]">Your home, organised.</h2>
                         <p class="mt-2.5 max-w-[560px] text-[15.5px] leading-relaxed text-hh-ink2">
-                            The daily three — meals, calendar, lists — stay free for your household. Paid plans are for the deeper filing cabinet:
-                            money, documents and the things that need remembering years from now.
+                            Keep the everyday stuff free — meals, calendar, shopping and chores. Upgrade when you want the deeper household
+                            management: money, documents, reminders, automation and more.
                         </p>
                     </div>
 
