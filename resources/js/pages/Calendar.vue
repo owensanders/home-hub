@@ -239,7 +239,8 @@ function destroy(): void {
                                 :key="event.id"
                                 type="button"
                                 :disabled="!canEditCalendar || event.date < todayIso"
-                                class="flex items-center gap-1.5 rounded-[9px] bg-hh-soft px-1.5 py-1 text-left transition hover:translate-x-[2px] disabled:opacity-50 disabled:hover:translate-x-0"
+                                class="flex items-center gap-1.5 bg-hh-soft px-1.5 py-1 text-left transition hover:translate-x-[2px] disabled:opacity-50 disabled:hover:translate-x-0"
+                                :class="[event.isSpanStart ? 'rounded-l-[9px]' : '', event.isSpanEnd ? 'rounded-r-[9px]' : '']"
                                 @click="openEdit(event)"
                             >
                                 <span class="h-[22px] w-[3px] flex-none rounded-sm" :style="{ background: event.colour }"></span>

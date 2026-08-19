@@ -28,4 +28,6 @@ interface HouseholdRepositoryInterface
 
     /** @return Collection<int, BudgetCategory> */
     public function budgetFor(Household $household, CarbonImmutable $month): Collection;
+
+    public function delete(Household $household): void;
 }

@@ -22,17 +22,19 @@ class CalendarEventData extends Data
         public string $colour,
         public string $colourKey,
         public array $attendees,
+        public bool $isSpanStart,
+        public bool $isSpanEnd,
         /** Raw values for the edit form, which needs to round-trip them back. */
         public string $startsAt,
         public ?string $endsAt,
     ) {}
 
-    public static function fromModel(CalendarEvent $event): self
+    public static function fromModel(CalendarEvent $event, string $forDate): self
     {
         return new self(
             id: $event->id,
             title: $event->title,
-            date: $event->starts_at->toDateString(),
+            date: $forDate,
             time: $event->timeLabel(),
             who: $event->whoLabel(),
             isAllDay: $event->is_all_day,
@@ -41,6 +43,8 @@ class CalendarEventData extends Data
             colour: $event->colour->cssVar(),
             colourKey: $event->colour->value,
             attendees: $event->attendees->map(MemberData::fromModel(...))->values()->all(),
+            isSpanStart: $forDate === $event->starts_at->toDateString(),
+            isSpanEnd: $forDate === ($event->ends_at ?? $event->starts_at)->toDateString(),
             startsAt: $event->starts_at->format('Y-m-d\TH:i'),
             endsAt: $event->ends_at?->format('Y-m-d\TH:i'),
         );

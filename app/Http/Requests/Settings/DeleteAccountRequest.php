@@ -13,6 +13,7 @@ class DeleteAccountRequest extends FormRequest
     {
         return [
             'password' => ['required', 'current_password'],
+            'confirm_household_deletion' => ['sometimes', 'boolean'],
         ];
     }
 }

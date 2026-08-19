@@ -172,6 +172,41 @@ class CalendarTest extends TestCase
     }
 
     #[Test]
+    public function aMultiDayEventShowsInEveryCellItSpans(): void
+    {
+        $user = User::factory()->create();
+
+        $start = CarbonImmutable::today()->addDays(3);
+        $end = $start->addDays(4);
+
+        CalendarEvent::factory()->create([
+            'household_id' => $user->household_id,
+            'title' => 'Family trip',
+            'starts_at' => $start->setTime(9, 0),
+            'ends_at' => $end->setTime(17, 0),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/calendar')
+            ->assertInertia(function ($page) use ($start, $end) {
+                /** @var array<int, array<string, mixed>> $days */
+                $days = $page->toArray()['props']['calendar']['days'];
+                $byDate = collect($days)->keyBy('date');
+
+                for ($date = $start; $date->lte($end); $date = $date->addDay()) {
+                    $cell = $byDate[$date->toDateString()];
+                    $this->assertCount(1, $cell['events'], "expected an event on {$date->toDateString()}");
+                    $this->assertSame('Family trip', $cell['events'][0]['title']);
+                    $this->assertSame($date->isSameDay($start), $cell['events'][0]['isSpanStart']);
+                    $this->assertSame($date->isSameDay($end), $cell['events'][0]['isSpanEnd']);
+                }
+
+                $dayBefore = $byDate[$start->subDay()->toDateString()];
+                $this->assertCount(0, $dayBefore['events']);
+            });
+    }
+
+    #[Test]
     public function anEventWithNoAttendeesIsForTheWholeHouse(): void
     {
         $user = User::factory()->create();

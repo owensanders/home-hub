@@ -9,6 +9,7 @@ const passwordInput = ref<HTMLInputElement | null>(null);
 
 const form = useForm({
     password: '',
+    confirm_household_deletion: false,
 });
 
 const deleteUser = (e: Event) => {
@@ -68,10 +69,27 @@ const closeModal = () => {
                             <InputError :message="form.errors.password" />
                         </div>
 
+                        <div v-if="form.errors.household" class="rounded-[13px] bg-[color-mix(in_srgb,var(--hh-coral)_10%,transparent)] p-3.5">
+                            <p class="text-[13px] text-hh-ink2">{{ form.errors.household }}</p>
+                            <a :href="route('house.index')" class="mt-1.5 inline-block text-[13px] font-bold text-hh-coral underline">
+                                Go promote another member to Owner instead
+                            </a>
+                            <label class="mt-3 flex items-start gap-2 text-[13px] text-hh-ink2">
+                                <input v-model="form.confirm_household_deletion" type="checkbox" class="mt-0.5" />
+                                I understand — delete my household and all its data
+                            </label>
+                        </div>
+
                         <DialogFooter class="gap-2">
                             <DialogClose class="hh-btn w-auto bg-hh-soft text-hh-ink" @click="closeModal"> Cancel </DialogClose>
 
-                            <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="form.processing">Delete account</button>
+                            <button
+                                type="submit"
+                                class="hh-btn w-auto bg-hh-coral text-white"
+                                :disabled="form.processing || (!!form.errors.household && !form.confirm_household_deletion)"
+                            >
+                                Delete account
+                            </button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

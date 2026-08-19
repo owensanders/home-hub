@@ -18,7 +18,11 @@ class CalendarEventRepository implements CalendarEventRepositoryInterface
     {
         return $household->calendarEvents()
             ->with('attendees')
-            ->whereBetween('starts_at', [$from, $to])
+            ->where('starts_at', '<=', $to)
+            ->where(function ($query) use ($from) {
+                $query->where('ends_at', '>=', $from)
+                    ->orWhere(fn ($q) => $q->whereNull('ends_at')->where('starts_at', '>=', $from));
+            })
             ->orderBy('starts_at')
             ->orderBy('id')
             ->get();

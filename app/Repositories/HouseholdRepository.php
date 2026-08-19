@@ -56,4 +56,9 @@ class HouseholdRepository implements HouseholdRepositoryInterface
             ->whereDate('month', $month->startOfMonth()->toDateString())
             ->get();
     }
+
+    public function delete(Household $household): void
+    {
+        $household->delete();
+    }
 }

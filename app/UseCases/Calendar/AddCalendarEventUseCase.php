@@ -18,8 +18,8 @@ class AddCalendarEventUseCase
      */
     public function execute(Household $household, array $attributes, array $attendeeIds): CalendarEventData
     {
-        return CalendarEventData::fromModel(
-            $this->events->create($household, $attributes, $attendeeIds)
-        );
+        $event = $this->events->create($household, $attributes, $attendeeIds);
+
+        return CalendarEventData::fromModel($event, $event->starts_at->toDateString());
     }
 }

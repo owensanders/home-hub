@@ -18,8 +18,8 @@ class UpdateCalendarEventUseCase
      */
     public function execute(CalendarEvent $event, array $attributes, array $attendeeIds): CalendarEventData
     {
-        return CalendarEventData::fromModel(
-            $this->events->update($event, $attributes, $attendeeIds)
-        );
+        $updated = $this->events->update($event, $attributes, $attendeeIds);
+
+        return CalendarEventData::fromModel($updated, $updated->starts_at->toDateString());
     }
 }

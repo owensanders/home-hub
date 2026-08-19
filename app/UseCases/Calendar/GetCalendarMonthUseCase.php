@@ -32,8 +32,16 @@ class GetCalendarMonthUseCase
         $start = $first->startOfWeek();
         $end = $start->addDays(self::CELLS - 1)->endOfDay();
 
-        $events = $this->events->between($household, $start, $end)
-            ->groupBy(fn (CalendarEvent $event) => $event->starts_at->toDateString());
+        $eventsByDate = [];
+
+        foreach ($this->events->between($household, $start, $end) as $event) {
+            $spanStart = $event->starts_at->toImmutable()->max($start)->startOfDay();
+            $spanEnd = ($event->ends_at ?? $event->starts_at)->toImmutable()->min($end)->startOfDay();
+
+            for ($date = $spanStart; $date->lte($spanEnd); $date = $date->addDay()) {
+                $eventsByDate[$date->toDateString()][] = $event;
+            }
+        }
 
         $days = [];
         $weekdayLabels = [];
@@ -52,7 +60,10 @@ class GetCalendarMonthUseCase
                 dateLabel: $day->format('j'),
                 isToday: $day->isSameDay($today),
                 isCurrentMonth: $day->month === $first->month,
-                events: $events->get($key, collect())->map(CalendarEventData::fromModel(...))->values()->all(),
+                events: collect($eventsByDate[$key] ?? [])
+                    ->map(fn (CalendarEvent $event) => CalendarEventData::fromModel($event, $key))
+                    ->values()
+                    ->all(),
             );
         }
 

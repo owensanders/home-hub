@@ -138,6 +138,9 @@ export interface CalendarEvent {
     /** The `Palette` case name, for the colour picker. */
     colourKey: string;
     attendees: Member[];
+    /** True on the day cell where the event actually starts/ends (for spanning-bar corner rounding). */
+    isSpanStart: boolean;
+    isSpanEnd: boolean;
     /** `YYYY-MM-DDTHH:mm`, for prefilling the edit form. */
     startsAt: string;
     endsAt: string | null;
