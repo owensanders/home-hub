@@ -4,12 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useHouseholdRole } from '@/composables/useHouseholdRole';
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { dial, tickStyle } from '@/lib/househub';
-import type { Chore, ChoreColumn, ChoreStatus, Member, MemberScore } from '@/types/househub';
+import type { Chore, ChoreColumn, ChoreRepeat, ChoreStatus, Member, MemberScore } from '@/types/househub';
 import { router, useForm } from '@inertiajs/vue3';
-import { Plus } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { Plus, X } from 'lucide-vue-next';
+import { ref } from 'vue';
 
-const props = defineProps<{
+defineProps<{
     columns: ChoreColumn[];
     scores: MemberScore[];
     members: Member[];
@@ -17,6 +17,51 @@ const props = defineProps<{
 
 const { canManage, canToggleChore } = useHouseholdRole();
 
+const REPEAT_OPTIONS: { value: ChoreRepeat; label: string }[] = [
+    { value: 'none', label: 'Does not repeat' },
+    { value: 'daily', label: 'Every day' },
+    { value: 'weekdays', label: 'Every weekday' },
+    { value: 'weekly', label: 'Every week' },
+    { value: 'fortnightly', label: 'Every 2 weeks' },
+    { value: 'monthly', label: 'Every month' },
+];
+
+function todayIso(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Add chore
+const draft = ref('');
+const draftAssignedTo = ref('');
+const draftDueDate = ref(todayIso());
+const draftRepeat = ref<ChoreRepeat>('none');
+
+function addChore(): void {
+    if (!draft.value.trim() || !draftDueDate.value) {
+        return;
+    }
+
+    router.post(
+        route('chores.store'),
+        {
+            name: draft.value.trim(),
+            assigned_to: draftAssignedTo.value === '' ? null : Number(draftAssignedTo.value),
+            due_date: draftDueDate.value,
+            repeat: draftRepeat.value,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                draft.value = '';
+                draftDueDate.value = todayIso();
+                draftRepeat.value = 'none';
+            },
+        },
+    );
+}
+
+// Drag and drop between columns
 const draggingId = ref<number | null>(null);
 
 function startDrag(event: DragEvent, id: number): void {
@@ -46,33 +91,16 @@ function toggle(chore: Chore): void {
     router.patch(route('chores.toggle', { chore: chore.id }), {}, { preserveScroll: true });
 }
 
+// Edit
 const open = ref(false);
 const editing = ref<Chore | null>(null);
 
 const form = useForm({
     name: '',
     assigned_to: '',
-    status: 'today' as ChoreStatus,
-    due_label: '',
-    repeat_label: '',
+    due_date: '',
+    repeat: 'none' as ChoreRepeat,
 });
-
-const dialogTitle = computed(() => (editing.value ? 'Edit chore' : 'New chore'));
-const statusOptions = computed(() => props.columns.map((column) => ({ value: column.status, label: column.title })));
-
-function openNew(): void {
-    editing.value = null;
-    form.clearErrors();
-    form.defaults({
-        name: '',
-        assigned_to: '',
-        status: 'today',
-        due_label: '',
-        repeat_label: '',
-    });
-    form.reset();
-    open.value = true;
-}
 
 function openEdit(chore: Chore): void {
     editing.value = chore;
@@ -80,52 +108,48 @@ function openEdit(chore: Chore): void {
     form.defaults({
         name: chore.name,
         assigned_to: chore.assignee ? String(chore.assignee.id) : '',
-        status: chore.status,
-        due_label: chore.dueLabel ?? '',
-        repeat_label: chore.repeatLabel ?? '',
+        due_date: chore.dueDate,
+        repeat: chore.repeat,
     });
     form.reset();
     open.value = true;
 }
 
 function submit(): void {
-    const options = {
-        preserveScroll: true,
-        onSuccess: () => {
-            open.value = false;
-        },
-    };
+    if (editing.value === null) {
+        return;
+    }
 
     form.transform((data) => ({
         ...data,
         assigned_to: data.assigned_to === '' ? null : Number(data.assigned_to),
     }));
 
-    if (editing.value) {
-        form.patch(route('chores.update', { chore: editing.value.id }), options);
-    } else {
-        form.post(route('chores.store'), options);
-    }
+    form.patch(route('chores.update', { chore: editing.value.id }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            open.value = false;
+        },
+    });
 }
 
+// Delete
 const confirmOpen = ref(false);
+const deleting = ref<Chore | null>(null);
 
-function destroy(): void {
-    if (editing.value === null) {
-        return;
-    }
-
+function requestDelete(chore: Chore): void {
+    deleting.value = chore;
     confirmOpen.value = true;
 }
 
 function confirmDestroy(): void {
-    if (editing.value === null) {
+    if (deleting.value === null) {
         return;
     }
 
     confirmOpen.value = false;
 
-    router.delete(route('chores.destroy', { chore: editing.value.id }), {
+    router.delete(route('chores.destroy', { chore: deleting.value.id }), {
         preserveScroll: true,
         onSuccess: () => {
             open.value = false;
@@ -137,13 +161,6 @@ function confirmDestroy(): void {
 <template>
     <HouseHubLayout title="Chores" subtitle="This week">
         <div class="flex animate-hh-rise flex-col gap-[18px]">
-            <div v-if="canManage" class="flex items-center gap-2">
-                <button type="button" class="hh-btn w-auto bg-hh-coral text-white" @click="openNew">
-                    <Plus class="h-4 w-4" :stroke-width="2.5" />
-                    New chore
-                </button>
-            </div>
-
             <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
                 <div
                     v-for="score in scores"
@@ -165,7 +182,32 @@ function confirmDestroy(): void {
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+            <section v-if="canManage" class="flex flex-wrap items-center gap-2.5 rounded-[20px] border border-hh-line bg-hh-panel p-[18px]">
+                <input
+                    v-model="draft"
+                    type="text"
+                    placeholder="Add a chore, e.g. Clean the bathroom"
+                    class="hh-input h-12 min-w-[220px] flex-1"
+                    @keydown.enter="addChore"
+                />
+                <select v-model="draftAssignedTo" class="hh-input h-12 w-[132px]">
+                    <option value="">Unassigned</option>
+                    <option v-for="member in members" :key="member.id" :value="String(member.id)">{{ member.name }}</option>
+                </select>
+                <label class="flex h-12 items-center gap-2 rounded-2xl border border-hh-line bg-hh-card px-3.5">
+                    <span class="text-xs font-semibold text-hh-ink3">Starts</span>
+                    <input v-model="draftDueDate" type="date" required class="h-full border-0 bg-transparent text-sm font-semibold" />
+                </label>
+                <select v-model="draftRepeat" class="hh-input h-12 w-[172px]">
+                    <option v-for="option in REPEAT_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                </select>
+                <button type="button" class="hh-btn w-auto bg-hh-coral text-white" @click="addChore">
+                    <Plus class="h-4 w-4" :stroke-width="2.5" />
+                    Add chore
+                </button>
+            </section>
+
+            <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
                 <div
                     v-for="column in columns"
                     :key="column.status"
@@ -205,12 +247,18 @@ function confirmDestroy(): void {
                             >
                                 {{ chore.done ? '✓' : '' }}
                             </button>
-                            <span
-                                class="flex-1 text-sm font-medium leading-snug"
-                                :class="chore.done ? 'text-hh-ink3 line-through' : 'text-hh-ink'"
-                            >
+                            <span class="flex-1 text-sm font-medium leading-snug" :class="chore.done ? 'text-hh-ink3 line-through' : 'text-hh-ink'">
                                 {{ chore.name }}
                             </span>
+                            <button
+                                v-if="canManage"
+                                type="button"
+                                title="Delete chore"
+                                class="grid h-6 w-6 flex-none place-items-center rounded-lg border-0 bg-transparent text-hh-ink3 transition hover:bg-hh-soft hover:text-hh-coral"
+                                @click.stop="requestDelete(chore)"
+                            >
+                                <X class="h-3 w-3" :stroke-width="2.5" />
+                            </button>
                         </div>
                         <div class="mt-3 flex items-center gap-1.5">
                             <span
@@ -221,23 +269,24 @@ function confirmDestroy(): void {
                                 {{ chore.assignee.initials }}
                             </span>
                             <span class="text-[11.5px] text-hh-ink3">{{ chore.dueLabel }}</span>
-                            <span
-                                v-if="chore.repeatLabel"
-                                class="ml-auto rounded-[7px] bg-hh-soft px-2 py-[3px] text-[11px] text-hh-ink2"
-                            >
+                            <span v-if="chore.repeatLabel" class="ml-auto rounded-[7px] bg-hh-soft px-2 py-[3px] text-[11px] text-hh-ink2">
                                 {{ chore.repeatLabel }}
                             </span>
                         </div>
+                    </div>
+
+                    <div v-if="column.items.length === 0" class="py-6 text-center text-[12.5px] text-hh-ink3">
+                        {{ column.status === 'done' ? 'Nothing ticked off yet.' : 'Drag a chore here.' }}
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Add / edit -->
+        <!-- Edit -->
         <Dialog :open="open" @update:open="open = $event">
             <DialogContent class="rounded-[22px] border-hh-line bg-hh-card text-hh-ink sm:rounded-[22px]">
                 <DialogHeader>
-                    <DialogTitle class="text-[16px] font-extrabold tracking-tight">{{ dialogTitle }}</DialogTitle>
+                    <DialogTitle class="text-[16px] font-extrabold tracking-tight">Edit chore</DialogTitle>
                 </DialogHeader>
 
                 <form class="flex flex-col gap-4" @submit.prevent="submit">
@@ -247,55 +296,41 @@ function confirmDestroy(): void {
                         <p v-if="form.errors.name" class="text-[12.5px] text-hh-coral">{{ form.errors.name }}</p>
                     </div>
 
+                    <div class="flex flex-col gap-1.5">
+                        <label for="assigned_to" class="hh-label">Assignee</label>
+                        <select id="assigned_to" v-model="form.assigned_to" class="hh-input">
+                            <option value="">Unassigned</option>
+                            <option v-for="member in members" :key="member.id" :value="String(member.id)">
+                                {{ member.name }}
+                            </option>
+                        </select>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <div class="flex flex-col gap-1.5">
-                            <label for="status" class="hh-label">Status</label>
-                            <select id="status" v-model="form.status" class="hh-input">
-                                <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                            <label for="due_date" class="hh-label">Starts</label>
+                            <input id="due_date" v-model="form.due_date" type="date" class="hh-input" required />
+                            <p v-if="form.errors.due_date" class="text-[12.5px] text-hh-coral">{{ form.errors.due_date }}</p>
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label for="repeat" class="hh-label">Repeats</label>
+                            <select id="repeat" v-model="form.repeat" class="hh-input">
+                                <option v-for="option in REPEAT_OPTIONS" :key="option.value" :value="option.value">
                                     {{ option.label }}
                                 </option>
                             </select>
                         </div>
-
-                        <div class="flex flex-col gap-1.5">
-                            <label for="assigned_to" class="hh-label">Assignee</label>
-                            <select id="assigned_to" v-model="form.assigned_to" class="hh-input">
-                                <option value="">Unassigned</option>
-                                <option v-for="member in members" :key="member.id" :value="String(member.id)">
-                                    {{ member.name }}
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="flex flex-col gap-1.5">
-                            <label for="due_label" class="hh-label">Due</label>
-                            <input id="due_label" v-model="form.due_label" type="text" class="hh-input" placeholder="Today" />
-                        </div>
-
-                        <div class="flex flex-col gap-1.5">
-                            <label for="repeat_label" class="hh-label">Repeats</label>
-                            <input id="repeat_label" v-model="form.repeat_label" type="text" class="hh-input" placeholder="Weekly" />
-                        </div>
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="form.processing">
-                            {{ editing ? 'Save changes' : 'Add chore' }}
-                        </button>
+                        <button type="submit" class="hh-btn w-auto bg-hh-coral text-white" :disabled="form.processing">Save changes</button>
                         <button type="button" class="hh-btn w-auto bg-hh-soft text-hh-ink" @click="open = false">Cancel</button>
-                        <button v-if="editing" type="button" class="hh-btn ml-auto w-auto bg-hh-soft text-hh-coral" @click="destroy">Delete</button>
                     </div>
                 </form>
             </DialogContent>
         </Dialog>
 
-        <ConfirmDialog
-            :open="confirmOpen"
-            message="Delete this chore?"
-            @update:open="confirmOpen = $event"
-            @confirm="confirmDestroy"
-        />
+        <ConfirmDialog :open="confirmOpen" message="Delete this chore?" @update:open="confirmOpen = $event" @confirm="confirmDestroy" />
     </HouseHubLayout>
 </template>

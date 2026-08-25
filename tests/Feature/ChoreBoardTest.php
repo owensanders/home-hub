@@ -37,7 +37,7 @@ class ChoreBoardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Chores')
-                ->count('columns', 4)
+                ->count('columns', 3)
                 ->where('columns.0.status', 'today')
                 ->where('columns.1.status', 'upcoming')
                 ->where('columns.1.count', 1)
@@ -73,11 +73,11 @@ class ChoreBoardTest extends TestCase
         $chore = Chore::factory()->create(['household_id' => $user->household_id]);
 
         $this->actingAs($user)
-            ->patch("/chores/{$chore->id}/move", ['status' => 'recurring'])
+            ->patch("/chores/{$chore->id}/move", ['status' => 'upcoming'])
             ->assertRedirect()
-            ->assertSessionHas('toast', 'Moved to Recurring');
+            ->assertSessionHas('toast', 'Moved to Upcoming');
 
-        $this->assertSame(ChoreStatus::Recurring, $chore->refresh()->status);
+        $this->assertSame(ChoreStatus::Upcoming, $chore->refresh()->status);
     }
 
     #[Test]
@@ -112,8 +112,8 @@ class ChoreBoardTest extends TestCase
         $this->actingAs($user)
             ->post('/chores', [
                 'name' => 'Clean the gutters',
-                'status' => 'today',
-                'due_label' => 'This weekend',
+                'due_date' => today()->addWeek()->toDateString(),
+                'repeat' => 'monthly',
             ])
             ->assertRedirect()
             ->assertSessionHas('toast', 'Clean the gutters added');
@@ -121,8 +121,21 @@ class ChoreBoardTest extends TestCase
         $this->assertDatabaseHas('chores', [
             'household_id' => $user->household_id,
             'name' => 'Clean the gutters',
-            'status' => 'today',
+            'status' => 'upcoming',
+            'repeat' => 'monthly',
         ]);
+    }
+
+    #[Test]
+    public function itDerivesTheColumnFromTheDueDate(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/chores', ['name' => 'Wash up', 'due_date' => today()->toDateString()]);
+        $this->assertDatabaseHas('chores', ['name' => 'Wash up', 'status' => 'today']);
+
+        $this->actingAs($user)->post('/chores', ['name' => 'Wash the car', 'due_date' => today()->addWeek()->toDateString()]);
+        $this->assertDatabaseHas('chores', ['name' => 'Wash the car', 'status' => 'upcoming']);
     }
 
     #[Test]
@@ -134,7 +147,7 @@ class ChoreBoardTest extends TestCase
         $this->actingAs($user)
             ->patch("/chores/{$chore->id}", [
                 'name' => 'Water the houseplants',
-                'status' => 'upcoming',
+                'due_date' => today()->addWeek()->toDateString(),
             ])
             ->assertRedirect()
             ->assertSessionHas('toast', 'Water the houseplants updated');
@@ -145,6 +158,39 @@ class ChoreBoardTest extends TestCase
     }
 
     #[Test]
+    public function editingADoneChoreDoesNotUncompleteIt(): void
+    {
+        $user = User::factory()->create();
+        $chore = Chore::factory()->create(['household_id' => $user->household_id, 'status' => ChoreStatus::Done]);
+
+        $this->actingAs($user)->patch("/chores/{$chore->id}", [
+            'name' => $chore->name,
+            'due_date' => today()->addWeek()->toDateString(),
+        ]);
+
+        $this->assertSame(ChoreStatus::Done, $chore->refresh()->status);
+    }
+
+    #[Test]
+    public function editingAChoreWithoutChangingItsDueDateKeepsAManuallyMovedColumn(): void
+    {
+        $user = User::factory()->create();
+        $chore = Chore::factory()->create([
+            'household_id' => $user->household_id,
+            'due_date' => today()->addWeek(),
+        ]);
+
+        $this->actingAs($user)->patch("/chores/{$chore->id}/move", ['status' => 'today']);
+
+        $this->actingAs($user)->patch("/chores/{$chore->id}", [
+            'name' => $chore->name,
+            'due_date' => $chore->due_date->toDateString(),
+        ]);
+
+        $this->assertSame(ChoreStatus::Today, $chore->refresh()->status);
+    }
+
+    #[Test]
     public function itDoesNotUpdateAnotherHouseholdsChore(): void
     {
         $user = User::factory()->create();
@@ -152,7 +198,7 @@ class ChoreBoardTest extends TestCase
         $chore = Chore::factory()->create(['household_id' => $stranger->household_id, 'name' => 'Water the plants']);
 
         $this->actingAs($user)
-            ->patch("/chores/{$chore->id}", ['name' => 'Hijacked', 'status' => 'today'])
+            ->patch("/chores/{$chore->id}", ['name' => 'Hijacked', 'due_date' => today()->toDateString()])
             ->assertNotFound();
 
         $this->assertSame('Water the plants', $chore->refresh()->name);

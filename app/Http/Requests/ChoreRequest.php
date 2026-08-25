@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Enums\ChoreStatus;
+use App\Enums\ChoreRepeat;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,9 +16,8 @@ class ChoreRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:120'],
             'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')],
-            'status' => ['required', Rule::enum(ChoreStatus::class)],
-            'due_label' => ['nullable', 'string', 'max:60'],
-            'repeat_label' => ['nullable', 'string', 'max:60'],
+            'due_date' => ['required', 'date'],
+            'repeat' => ['nullable', Rule::enum(ChoreRepeat::class)],
         ];
     }
 
@@ -27,6 +26,7 @@ class ChoreRequest extends FormRequest
     {
         return [
             'name.required' => 'Give the chore a name.',
+            'due_date.required' => 'Give the chore a start date.',
         ];
     }
 
@@ -40,9 +40,8 @@ class ChoreRequest extends FormRequest
         return [
             'name' => trim((string) $this->validated('name')),
             'assigned_to' => $this->validated('assigned_to'),
-            'status' => $this->validated('status'),
-            'due_label' => $this->validated('due_label'),
-            'repeat_label' => $this->validated('repeat_label'),
+            'due_date' => $this->validated('due_date'),
+            'repeat' => $this->validated('repeat') ?? ChoreRepeat::None->value,
         ];
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Enums\ChoreRepeat;
 use App\Enums\ChoreStatus;
 use App\Enums\HouseholdRole;
 use App\Enums\MealSlot;
@@ -141,27 +142,26 @@ class HouseHubSeeder extends Seeder
     private function seedChores(Household $household, array $members): void
     {
         $chores = [
-            ['Empty dishwasher', 'noah', ChoreStatus::Today, 'Due today', 'Daily'],
-            ['Put the recycling out', 'james', ChoreStatus::Today, 'Before 7am Thu', 'Weekly'],
-            ['Hoover upstairs', 'sarah', ChoreStatus::Today, 'Due today', null],
-            ['Tidy bedroom', 'mia', ChoreStatus::Today, 'Due today', 'Daily'],
-            ['Water the plants', 'mia', ChoreStatus::Upcoming, 'Wed', null],
-            ['Change bed sheets', 'sarah', ChoreStatus::Upcoming, 'Sat', 'Fortnightly'],
-            ['Wash the car', 'james', ChoreStatus::Upcoming, 'Sun', 'Monthly'],
-            ['Feed the cat', 'noah', ChoreStatus::Done, '7:20am', 'Daily'],
-            ['Homework check', 'sarah', ChoreStatus::Done, 'Yesterday', 'Weekdays'],
-            ['Bins in from kerb', 'noah', ChoreStatus::Recurring, 'Every Thu pm', 'Weekly'],
-            ['Clean bathroom', 'sarah', ChoreStatus::Recurring, 'Every Sat', 'Weekly'],
-            ['Mow the lawn', 'james', ChoreStatus::Recurring, 'Every other Sun', 'Fortnightly'],
+            ['Empty dishwasher', 'noah', ChoreStatus::Today, today(), ChoreRepeat::Daily],
+            ['Put the recycling out', 'james', ChoreStatus::Today, today(), ChoreRepeat::Weekly],
+            ['Hoover upstairs', 'sarah', ChoreStatus::Today, today(), ChoreRepeat::None],
+            ['Tidy bedroom', 'mia', ChoreStatus::Today, today(), ChoreRepeat::Daily],
+            ['Water the plants', 'mia', ChoreStatus::Upcoming, today()->addDays(2), ChoreRepeat::None],
+            ['Change bed sheets', 'sarah', ChoreStatus::Upcoming, today()->addDays(5), ChoreRepeat::Fortnightly],
+            ['Wash the car', 'james', ChoreStatus::Upcoming, today()->addDays(6), ChoreRepeat::Monthly],
+            ['Clean bathroom', 'sarah', ChoreStatus::Upcoming, today()->addDays(5), ChoreRepeat::Weekly],
+            ['Mow the lawn', 'james', ChoreStatus::Upcoming, today()->addDays(6), ChoreRepeat::Fortnightly],
+            ['Feed the cat', 'noah', ChoreStatus::Done, today(), ChoreRepeat::Daily],
+            ['Homework check', 'sarah', ChoreStatus::Done, today()->subDay(), ChoreRepeat::Weekdays],
         ];
 
-        foreach ($chores as $position => [$name, $who, $status, $due, $repeat]) {
+        foreach ($chores as $position => [$name, $who, $status, $dueDate, $repeat]) {
             $household->chores()->create([
                 'assigned_to' => $members[$who]->id,
                 'name' => $name,
                 'status' => $status,
-                'due_label' => $due,
-                'repeat_label' => $repeat,
+                'due_date' => $dueDate,
+                'repeat' => $repeat,
                 'position' => $position,
             ]);
         }

@@ -37,11 +37,16 @@ export interface Chore {
     status: ChoreStatus;
     done: boolean;
     dueLabel: string | null;
+    /** `YYYY-MM-DD`, for prefilling the edit form's date input. */
+    dueDate: string;
     repeatLabel: string | null;
+    repeat: ChoreRepeat;
     assignee: Member | null;
 }
 
-export type ChoreStatus = 'today' | 'upcoming' | 'done' | 'recurring';
+export type ChoreStatus = 'today' | 'upcoming' | 'done';
+
+export type ChoreRepeat = 'none' | 'daily' | 'weekdays' | 'weekly' | 'fortnightly' | 'monthly';
 
 export interface ChoreColumn {
     status: ChoreStatus;
