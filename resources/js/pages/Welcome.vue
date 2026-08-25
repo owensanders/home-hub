@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { useAppearance } from '@/composables/useAppearance';
-import { dial, tickStyle, tint } from '@/lib/househub';
+import { dial, formatPlanPrice, tickStyle, tint } from '@/lib/househub';
 import type { SharedData } from '@/types';
+import type { Plan } from '@/types/househub';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { House } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+
+const props = defineProps<{ plans: Plan[] }>();
 
 const page = usePage<SharedData>();
 const { appearance, updateAppearance } = useAppearance();
@@ -74,76 +77,6 @@ const secondary = [
     { icon: '🏘', title: 'Multiple properties', body: 'Landlords and multi-home households, all under one login.' },
 ];
 
-type Plan = {
-    name: string;
-    price: { monthly: string; annual: string };
-    per: { monthly: string; annual: string };
-    sub: string;
-    cta: string;
-    note: string;
-    tag?: string;
-    highlight?: boolean;
-    features: { text: string; included: boolean }[];
-};
-
-const plans: Plan[] = [
-    {
-        name: 'Free',
-        price: { monthly: '£0', annual: '£0' },
-        per: { monthly: 'forever', annual: 'forever' },
-        sub: 'Everything you need for the everyday running of your home.',
-        cta: 'Create your household',
-        note: 'Perfect for getting your household organised.',
-        features: [
-            { text: 'Meal planner and recipe library', included: true },
-            { text: 'Shared household calendar', included: true },
-            { text: 'Shopping lists', included: true },
-            { text: 'Chores and streaks', included: true },
-            { text: 'Up to 2 household members', included: true },
-            { text: 'Household dashboard', included: true },
-        ],
-    },
-    {
-        name: 'Home',
-        price: { monthly: '£6.99', annual: '£69.99' },
-        per: { monthly: '/month', annual: '/year' },
-        sub: 'Run your whole household together, with everything in one place.',
-        cta: 'Start free, upgrade anytime',
-        note: 'No card required. Cancel anytime.',
-        tag: 'MOST POPULAR',
-        highlight: true,
-        features: [
-            { text: 'Everything in Free', included: true },
-            { text: 'Unlimited household members', included: true },
-            { text: 'Unlimited shopping lists', included: true },
-            { text: 'Document vault with 5GB storage', included: true },
-            { text: 'Home budgeting', included: true },
-            { text: 'Basic budget insights', included: true },
-            { text: '2 AI meal plans per month', included: true },
-        ],
-    },
-    {
-        name: 'Home Plus',
-        price: { monthly: '£12.99', annual: '£129.99' },
-        per: { monthly: '/month', annual: '/year' },
-        sub: 'Let your home do more of the work.',
-        cta: 'Choose Home Plus',
-        note: 'For larger households, multiple properties and people who want the admin to take care of itself.',
-        tag: 'PREMIUM',
-        features: [
-            { text: 'Everything in Home', included: true },
-            { text: 'Multiple properties under one login', included: true },
-            { text: '25GB document storage', included: true },
-            { text: 'Receipt/document scanning', included: true },
-            { text: 'AI-powered household insights', included: true },
-            { text: 'AI meal planning and shopping assistance', included: true },
-            { text: 'Export everything as PDF or CSV', included: true },
-            { text: 'Guest access for cleaners, sitters or other helpers', included: true },
-            { text: 'Priority human support', included: true },
-        ],
-    },
-];
-
 const cycles = [
     { key: 'monthly' as const, label: 'Monthly' },
     { key: 'annual' as const, label: 'Annual · 2 months free' },
@@ -175,6 +108,14 @@ function toggleTheme(): void {
 
 function startRegistration(): void {
     router.get(route('register'), email.value ? { email: email.value } : {});
+}
+
+function pricePeriod(plan: Plan): string {
+    if (plan.price[cycle.value] === 0) {
+        return 'forever';
+    }
+
+    return cycle.value === 'monthly' ? '/month' : '/year';
 }
 </script>
 
@@ -478,11 +419,11 @@ function startRegistration(): void {
 
                 <div class="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <div
-                        v-for="plan in plans"
-                        :key="plan.name"
+                        v-for="plan in props.plans"
+                        :key="plan.slug"
                         class="relative flex flex-col rounded-3xl border-[1.5px] p-7 transition hover:-translate-y-[3px] hover:shadow-hh"
-                        :class="plan.highlight ? 'border-transparent text-hh-onhero' : 'border-hh-line bg-hh-card text-hh-ink'"
-                        :style="plan.highlight ? { background: heroGradient } : undefined"
+                        :class="plan.highlighted ? 'border-transparent text-hh-onhero' : 'border-hh-line bg-hh-card text-hh-ink'"
+                        :style="plan.highlighted ? { background: heroGradient } : undefined"
                     >
                         <div class="flex items-center gap-2.5">
                             <span class="text-base font-extrabold tracking-tight">{{ plan.name }}</span>
@@ -495,17 +436,19 @@ function startRegistration(): void {
                         </div>
 
                         <div class="mt-4 flex items-baseline gap-[7px]">
-                            <span class="text-[46px] font-black tracking-[-0.04em]">{{ plan.price[cycle] }}</span>
-                            <span class="text-sm font-semibold" :class="plan.highlight ? 'text-hh-onhero2' : 'text-hh-ink3'">
-                                {{ plan.per[cycle] }}
+                            <span class="text-[46px] font-black tracking-[-0.04em]">{{ formatPlanPrice(plan.price[cycle]) }}</span>
+                            <span class="text-sm font-semibold" :class="plan.highlighted ? 'text-hh-onhero2' : 'text-hh-ink3'">
+                                {{ pricePeriod(plan) }}
                             </span>
                         </div>
-                        <div class="mt-1.5 text-[13px]" :class="plan.highlight ? 'text-hh-onhero2' : 'text-hh-ink3'">{{ plan.sub }}</div>
+                        <div class="mt-1.5 text-[13px]" :class="plan.highlighted ? 'text-hh-onhero2' : 'text-hh-ink3'">
+                            {{ plan.sub }}
+                        </div>
 
                         <Link
                             :href="route('register')"
                             class="mt-[22px] flex h-[50px] items-center justify-center rounded-[14px] text-[14.5px] font-bold transition hover:-translate-y-0.5"
-                            :class="plan.highlight ? 'bg-hh-coral text-white' : 'bg-hh-soft text-hh-ink'"
+                            :class="plan.highlighted ? 'bg-hh-coral text-white' : 'bg-hh-soft text-hh-ink'"
                         >
                             {{ plan.cta }}
                         </Link>
@@ -514,7 +457,7 @@ function startRegistration(): void {
                             <div v-for="feature in plan.features" :key="feature.text" class="flex items-start gap-2.5">
                                 <span
                                     class="mt-0.5 grid h-[18px] w-[18px] flex-none place-items-center rounded-md text-[10px] font-extrabold text-[#0E1A2B]"
-                                    :class="feature.included ? 'bg-hh-mint' : plan.highlight ? 'bg-hh-herofilm' : 'bg-hh-soft'"
+                                    :class="feature.included ? 'bg-hh-mint' : plan.highlighted ? 'bg-hh-herofilm' : 'bg-hh-soft'"
                                 >
                                     {{ feature.included ? '✓' : '' }}
                                 </span>
@@ -522,10 +465,10 @@ function startRegistration(): void {
                                     class="text-sm leading-snug"
                                     :class="
                                         feature.included
-                                            ? plan.highlight
+                                            ? plan.highlighted
                                                 ? 'text-hh-onhero'
                                                 : 'text-hh-ink'
-                                            : plan.highlight
+                                            : plan.highlighted
                                               ? 'text-hh-onhero2'
                                               : 'text-hh-ink3'
                                     "
@@ -535,7 +478,7 @@ function startRegistration(): void {
                             </div>
                         </div>
 
-                        <div class="mt-auto pt-[22px] text-[12.5px]" :class="plan.highlight ? 'text-hh-onhero2' : 'text-hh-ink3'">
+                        <div class="mt-auto pt-[22px] text-[12.5px]" :class="plan.highlighted ? 'text-hh-onhero2' : 'text-hh-ink3'">
                             {{ plan.note }}
                         </div>
                     </div>

@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
+import { formatPlanPrice } from '@/lib/househub';
 import type { House } from '@/types/househub';
 import { router, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 const props = defineProps<{ house: House }>();
 
 const invite = useForm({ name: '', email: '', role: 'adult' });
+const planCycle = ref<'monthly' | 'annual'>('monthly');
+
+function changePlan(slug: string): void {
+    router.patch(route('house.plan.update'), { plan: slug, cycle: planCycle.value }, { preserveScroll: true });
+}
 
 function sendInvite(): void {
     if (invite.name.trim() === '' || invite.email.trim() === '') {
@@ -216,6 +223,47 @@ function regenerateJoinCode(): void {
                             </button>
                         </div>
                         <div v-else class="mt-3 text-[12.5px] text-hh-ink3">Off — turn this on to get a shareable code.</div>
+                    </section>
+
+                    <!-- Plan -->
+                    <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Plan</h3>
+                            <div class="flex items-center gap-2 rounded-[12px] bg-hh-soft p-[4px]">
+                                <button
+                                    v-for="option in (['monthly', 'annual'] as const)"
+                                    :key="option"
+                                    type="button"
+                                    class="h-[28px] rounded-[9px] px-2.5 text-[12px] font-bold transition"
+                                    :class="planCycle === option ? 'bg-hh-card text-hh-ink' : 'bg-transparent text-hh-ink3'"
+                                    @click="planCycle = option"
+                                >
+                                    {{ option === 'monthly' ? 'Monthly' : 'Annual' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 flex flex-col gap-2">
+                            <button
+                                v-for="plan in props.house.plans"
+                                :key="plan.slug"
+                                type="button"
+                                class="flex items-center justify-between gap-2.5 rounded-2xl border-[1.5px] p-3.5 text-left transition-colors"
+                                :class="plan.current ? 'border-hh-coral bg-hh-sunk' : 'border-hh-line bg-transparent hover:bg-hh-soft'"
+                                @click="changePlan(plan.slug)"
+                            >
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[13.5px] font-bold">{{ plan.name }}</span>
+                                        <span v-if="plan.current" class="rounded-lg bg-hh-mint px-2 py-[2px] text-[10.5px] font-bold text-[#0E1A2B]">
+                                            Current
+                                        </span>
+                                    </div>
+                                    <div class="mt-0.5 text-[12px] text-hh-ink3">{{ plan.sub }}</div>
+                                </div>
+                                <span class="flex-none text-[13.5px] font-bold text-hh-ink2">{{ formatPlanPrice(plan.price[planCycle]) }}</span>
+                            </button>
+                        </div>
                     </section>
                 </div>
             </div>

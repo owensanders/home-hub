@@ -20,3 +20,8 @@ export function tickStyle(done: boolean): { borderColor: string; background: str
         background: done ? 'var(--hh-mint)' : 'transparent',
     };
 }
+
+/** A plan price in pounds, e.g. 6.99 -> "£6.99", 0 -> "Free". */
+export function formatPlanPrice(amount: number): string {
+    return amount === 0 ? 'Free' : `£${amount.toFixed(2).replace(/\.00$/, '')}`;
+}

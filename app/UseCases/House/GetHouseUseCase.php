@@ -7,6 +7,7 @@ namespace App\UseCases\House;
 use App\Contracts\Repositories\HouseholdRepositoryInterface;
 use App\Data\HouseData;
 use App\Data\HouseMemberData;
+use App\Data\PlanData;
 use App\Data\RoleSummaryData;
 use App\Data\StatData;
 use App\Enums\HouseholdRole;
@@ -24,6 +25,7 @@ class GetHouseUseCase
         $members = $this->households->members($household);
         $activeCount = $members->where('pending', false)->count();
         $pendingCount = $members->where('pending', true)->count();
+        $planSlug = $household->planSlug();
 
         return new HouseData(
             houseName: $household->name,
@@ -34,7 +36,7 @@ class GetHouseUseCase
             houseStats: [
                 new StatData('Members', (string) $activeCount),
                 new StatData('Invites out', (string) $pendingCount),
-                new StatData('Plan', 'Home'),
+                new StatData('Plan', config("plans.{$planSlug}.name")),
             ],
             memberCount: $members->count(),
             roleOptions: array_map(
@@ -51,6 +53,7 @@ class GetHouseUseCase
                 ),
                 HouseholdRole::cases(),
             ),
+            plans: PlanData::catalog($planSlug),
         );
     }
 }

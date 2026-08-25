@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Data\PlanData;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChoreController;
@@ -15,7 +16,7 @@ use App\Http\Controllers\ShoppingListController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', fn () => Inertia::render('Welcome'))->name('home');
+Route::get('/', fn () => Inertia::render('Welcome', ['plans' => PlanData::catalog()]))->name('home');
 
 Route::middleware(['auth', 'verified', 'household'])->group(function (): void {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -101,6 +102,7 @@ Route::middleware(['auth', 'verified', 'household'])->group(function (): void {
         Route::delete('house/members/{member}', [HouseController::class, 'destroy'])->name('house.members.destroy');
         Route::patch('house/join-code', [HouseController::class, 'toggleJoinCode'])->name('house.joinCode.toggle');
         Route::post('house/join-code/regenerate', [HouseController::class, 'regenerateJoinCode'])->name('house.joinCode.regenerate');
+        Route::patch('house/plan', [HouseController::class, 'updatePlan'])->name('house.plan.update');
     });
 });
 

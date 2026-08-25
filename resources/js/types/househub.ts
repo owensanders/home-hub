@@ -244,6 +244,24 @@ export interface HouseRole {
     count: number;
 }
 
+export interface PlanFeature {
+    text: string;
+    included: boolean;
+}
+
+export interface Plan {
+    slug: string;
+    name: string;
+    tag: string | null;
+    highlighted: boolean;
+    price: { monthly: number; annual: number };
+    sub: string;
+    cta: string;
+    note: string;
+    features: PlanFeature[];
+    current: boolean;
+}
+
 export interface House {
     houseName: string;
     houseAddress: string;
@@ -255,6 +273,7 @@ export interface House {
     roleOptions: RoleOption[];
     members: HouseMember[];
     roles: HouseRole[];
+    plans: Plan[];
 }
 
 export interface DocumentFolder {

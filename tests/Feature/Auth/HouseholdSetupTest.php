@@ -48,6 +48,36 @@ class HouseholdSetupTest extends TestCase
     }
 
     #[Test]
+    public function creatingAHouseholdOnTheFreePlanDoesNotContactStripe(): void
+    {
+        $user = User::factory()->create(['household_id' => null]);
+
+        $response = $this->actingAs($user)->post('/household/setup', [
+            'name' => 'The Parker household',
+            'plan' => 'free',
+            'cycle' => 'monthly',
+        ]);
+
+        $response->assertRedirect(route('household.done', absolute: false));
+        $this->assertNotNull($user->refresh()->household_id);
+    }
+
+    #[Test]
+    public function anUnknownPlanSlugFailsValidation(): void
+    {
+        $user = User::factory()->create(['household_id' => null]);
+
+        $response = $this->actingAs($user)->post('/household/setup', [
+            'name' => 'The Parker household',
+            'plan' => 'ultra',
+            'cycle' => 'monthly',
+        ]);
+
+        $response->assertSessionHasErrors('plan');
+        $this->assertNull($user->refresh()->household_id);
+    }
+
+    #[Test]
     public function everyHouseholdGetsAJoinCodeRegardlessOfHowItWasCreated(): void
     {
         $household = Household::factory()->create();

@@ -13,6 +13,7 @@ class HouseData extends Data
      * @param  list<array{value: string, label: string}>  $roleOptions
      * @param  list<HouseMemberData>  $members
      * @param  list<RoleSummaryData>  $roles
+     * @param  list<PlanData>  $plans
      */
     public function __construct(
         public string $houseName,
@@ -25,5 +26,6 @@ class HouseData extends Data
         public array $roleOptions,
         public array $members,
         public array $roles,
+        public array $plans,
     ) {}
 }

@@ -19,7 +19,10 @@ class WelcomeTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('Welcome'));
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Welcome')
+                ->count('plans', 3)
+                ->where('plans.0.slug', 'free'));
     }
 
     #[Test]

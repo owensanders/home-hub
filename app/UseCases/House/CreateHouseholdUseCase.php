@@ -23,8 +23,10 @@ class CreateHouseholdUseCase
     /**
      * `size` is collected for the wizard's copy but has nowhere to live yet —
      * ponytail: not persisted, add a column when a feature actually reads it.
+     * `plan`/`cycle` are handled separately by the caller once the household
+     * exists (a household must exist before it can be Billable).
      *
-     * @param  array{name: string, address?: string|null, size?: string|null, invites?: list<array{email: string, role: string}>}  $attributes
+     * @param  array{name: string, address?: string|null, size?: string|null, plan?: string|null, cycle?: string|null, invites?: list<array{email: string, role: string}>}  $attributes
      */
     public function execute(User $owner, array $attributes): Household
     {

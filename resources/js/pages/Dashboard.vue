@@ -291,7 +291,7 @@ function toggleChore(chore: Chore): void {
                     </div>
 
                     <div class="flex items-baseline gap-2.5">
-                        <span class="font-serif text-[40px] leading-[1.15]">{{ dashboard.budget.budgeted }}</span>
+                        <span class="font-mono text-[40px] leading-[1.15]">{{ dashboard.budget.budgeted }}</span>
                         <span class="text-[13px] text-hh-ink3">assigned</span>
                     </div>
 

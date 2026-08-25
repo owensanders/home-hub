@@ -7,10 +7,12 @@ namespace App\Http\Controllers;
 use App\Enums\HouseholdRole;
 use App\Http\Requests\InviteRequest;
 use App\Http\Requests\JoinCodeToggleRequest;
+use App\Http\Requests\PlanUpdateRequest;
 use App\Http\Requests\RoleRequest;
 use App\Models\User;
 use App\Traits\ResolvesHouseholdTrait;
 use App\UseCases\House\ApproveMemberUseCase;
+use App\UseCases\House\ChangeHouseholdPlanUseCase;
 use App\UseCases\House\ChangeMemberRoleUseCase;
 use App\UseCases\House\GetHouseUseCase;
 use App\UseCases\House\InviteMemberUseCase;
@@ -21,6 +23,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class HouseController extends Controller
 {
@@ -81,6 +85,27 @@ class HouseController extends Controller
         $regenerate->execute($this->household($request));
 
         return back()->with('toast', 'New invite code generated');
+    }
+
+    public function updatePlan(PlanUpdateRequest $request, ChangeHouseholdPlanUseCase $changePlan): SymfonyResponse
+    {
+        try {
+            $checkoutUrl = $changePlan->execute(
+                $this->household($request),
+                (string) $request->validated('plan'),
+                (string) $request->validated('cycle'),
+                successUrl: route('house.index'),
+                cancelUrl: route('house.index'),
+            );
+        } catch (RuntimeException $e) {
+            return back()->withErrors(['plan' => $e->getMessage()]);
+        }
+
+        if ($checkoutUrl !== null) {
+            return Inertia::location($checkoutUrl);
+        }
+
+        return back()->with('toast', 'Plan updated');
     }
 
     private function assertOwned(Request $request, User $member): void

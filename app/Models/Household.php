@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\HouseholdFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Laravel\Cashier\Billable;
 
 /**
  * @property int $id
@@ -20,7 +22,9 @@ use Illuminate\Support\Str;
  */
 class Household extends Model
 {
-    /** @use HasFactory<\Database\Factories\HouseholdFactory> */
+    use Billable;
+
+    /** @use HasFactory<HouseholdFactory> */
     use HasFactory;
 
     /** @var list<string> */
@@ -112,5 +116,24 @@ class Household extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(Document::class);
+    }
+
+    /** The config('plans') slug for this household's active subscription, or 'free' if unsubscribed. */
+    public function planSlug(): string
+    {
+        $subscription = $this->subscription('default');
+        $activePrice = $subscription?->active() === true ? $subscription->stripe_price : null;
+
+        if ($activePrice === null) {
+            return 'free';
+        }
+
+        foreach (config('plans') as $slug => $plan) {
+            if (in_array($activePrice, $plan['stripe_price'], true)) {
+                return $slug;
+            }
+        }
+
+        return 'free';
     }
 }

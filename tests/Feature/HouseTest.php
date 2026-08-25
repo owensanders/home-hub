@@ -42,7 +42,31 @@ class HouseTest extends TestCase
                 ->where('house.houseStats.1.value', '1')
                 ->count('house.members', 3)
                 ->count('house.roles', 4)
+                ->count('house.plans', 3)
+                ->where('house.plans.0.slug', 'free')
+                ->where('house.plans.0.current', true)
             );
+    }
+
+    #[Test]
+    public function itSwitchesAnUnsubscribedHouseholdToFreeWithoutContactingStripe(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+
+        $this->actingAs($owner)
+            ->patch('/house/plan', ['plan' => 'free', 'cycle' => 'monthly'])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Plan updated');
+    }
+
+    #[Test]
+    public function itRejectsAnUnknownPlanSlug(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+
+        $this->actingAs($owner)
+            ->patch('/house/plan', ['plan' => 'ultra', 'cycle' => 'monthly'])
+            ->assertSessionHasErrors('plan');
     }
 
     #[Test]
