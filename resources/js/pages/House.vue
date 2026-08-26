@@ -103,7 +103,7 @@ function regenerateJoinCode(): void {
                                         {{ member.pendingReason === 'requested' ? 'Wants to join' : 'Invite pending' }}
                                     </span>
                                 </div>
-                                <div class="mt-1 text-[12.5px] text-hh-ink3">{{ member.email }} · {{ member.activity }}</div>
+                                <div class="mt-1 text-[12.5px] text-hh-ink3">{{ member.email }}</div>
                             </div>
                             <select
                                 :value="member.role"
@@ -169,27 +169,13 @@ function regenerateJoinCode(): void {
                         <div class="mt-2.5 text-[12.5px] text-hh-ink3">
                             Invites expire after 7 days. Children get a simplified view with chores and the calendar only.
                         </div>
-                    </div>
-                </section>
 
-                <div class="flex flex-col gap-4">
-                    <!-- What each role can do -->
-                    <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
-                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">What each role can do</h3>
-                        <div class="mt-3 flex flex-col gap-2.5">
-                            <div v-for="role in props.house.roles" :key="role.name" class="rounded-2xl bg-hh-sunk p-3.5">
-                                <div class="flex items-center gap-2">
-                                    <span class="h-2 w-2 rounded-sm" :style="{ background: role.colour }"></span>
-                                    <span class="text-[13.5px] font-bold">{{ role.name }}</span>
-                                    <span class="ml-auto text-[11.5px] text-hh-ink3">{{ role.count }} {{ role.count === 1 ? 'person' : 'people' }}</span>
-                                </div>
-                                <div class="mt-1.5 text-[12.5px] leading-relaxed text-hh-ink2">{{ role.body }}</div>
-                            </div>
+                        <div class="my-4 flex items-center gap-3 text-[11.5px] font-semibold text-hh-ink3">
+                            <span class="h-px flex-1 bg-hh-line"></span>
+                            Or
+                            <span class="h-px flex-1 bg-hh-line"></span>
                         </div>
-                    </section>
 
-                    <!-- Invite code -->
-                    <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
                         <div class="flex items-center gap-3 rounded-2xl bg-hh-sunk p-3.5">
                             <div class="min-w-0 flex-1 pr-3">
                                 <div class="text-[13px] font-semibold">Invite code</div>
@@ -223,8 +209,10 @@ function regenerateJoinCode(): void {
                             </button>
                         </div>
                         <div v-else class="mt-3 text-[12.5px] text-hh-ink3">Off — turn this on to get a shareable code.</div>
-                    </section>
+                    </div>
+                </section>
 
+                <div class="flex flex-col gap-4">
                     <!-- Plan -->
                     <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
                         <div class="flex items-center justify-between">
@@ -263,6 +251,21 @@ function regenerateJoinCode(): void {
                                 </div>
                                 <span class="flex-none text-[13.5px] font-bold text-hh-ink2">{{ formatPlanPrice(plan.price[planCycle]) }}</span>
                             </button>
+                        </div>
+                    </section>
+
+                    <!-- What each role can do -->
+                    <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">What each role can do</h3>
+                        <div class="mt-3 flex flex-col gap-2.5">
+                            <div v-for="role in props.house.roles" :key="role.name" class="rounded-2xl bg-hh-sunk p-3.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="h-2 w-2 rounded-sm" :style="{ background: role.colour }"></span>
+                                    <span class="text-[13.5px] font-bold">{{ role.name }}</span>
+                                    <span class="ml-auto text-[11.5px] text-hh-ink3">{{ role.count }} {{ role.count === 1 ? 'person' : 'people' }}</span>
+                                </div>
+                                <div class="mt-1.5 text-[12.5px] leading-relaxed text-hh-ink2">{{ role.body }}</div>
+                            </div>
                         </div>
                     </section>
                 </div>
