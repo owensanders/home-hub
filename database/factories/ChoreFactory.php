@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\ChoreRepeat;
 use App\Enums\ChoreStatus;
 use App\Models\Chore;
 use App\Models\Household;
@@ -24,8 +23,6 @@ class ChoreFactory extends Factory
             'assigned_to' => User::factory(),
             'name' => $this->faker->sentence(3),
             'status' => ChoreStatus::Today,
-            'due_date' => today(),
-            'repeat' => ChoreRepeat::None,
             'position' => 0,
         ];
     }

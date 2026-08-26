@@ -58,7 +58,6 @@ class DashboardTest extends TestCase
 
         Chore::factory()->count(2)->create(['household_id' => $household->id, 'status' => ChoreStatus::Today]);
         Chore::factory()->create(['household_id' => $household->id, 'status' => ChoreStatus::Done]);
-        Chore::factory()->create(['household_id' => $household->id, 'status' => ChoreStatus::Upcoming]);
 
         $this->actingAs($user)
             ->get('/dashboard')
@@ -71,7 +70,6 @@ class DashboardTest extends TestCase
                 ->where('dashboard.tonight.tags', ['Healthy'])
                 ->where('dashboard.shoppingList.name', 'Tesco')
                 ->where('dashboard.shoppingList.remaining', 3)
-                // Upcoming chores are not part of today's tally.
                 ->where('dashboard.choreProgress.total', 3)
                 ->where('dashboard.choreProgress.done', 1)
                 ->where('dashboard.choreProgress.percentage', 33)
