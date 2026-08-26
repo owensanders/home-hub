@@ -18,8 +18,9 @@ class HouseholdFactory extends Factory
         return [
             'name' => $this->faker->lastName().' household',
             'location' => $this->faker->city(),
-            'address' => $this->faker->streetAddress().', '.$this->faker->city(),
             'streak_days' => $this->faker->numberBetween(0, 30),
+            'streak_last_active_date' => today(),
+            'trial_ends_at' => now()->addDays(30),
         ];
     }
 }

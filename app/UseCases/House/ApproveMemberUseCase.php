@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\UseCases\House;
 
-use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Models\Household;
 use App\Models\User;
 
 class ApproveMemberUseCase
 {
-    public function __construct(private readonly UserRepositoryInterface $users) {}
-
-    public function execute(User $member): User
+    public function execute(User $member, Household $household): User
     {
-        return $this->users->update($member, ['pending' => false, 'pending_reason' => null]);
+        $member->households()->updateExistingPivot($household->id, [
+            'pending' => false,
+            'pending_reason' => null,
+        ]);
+
+        return $member->refresh();
     }
 }

@@ -12,7 +12,7 @@ class EnsureHouseholdRole
 {
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        $role = $request->user()?->role;
+        $role = $request->user()?->currentRole();
 
         abort_if($role === null || ! in_array($role->value, $roles, true), 403);
 

@@ -93,7 +93,7 @@ class ChoreController extends Controller
     /** Teen/Child can only tick off chores assigned to them; Owner/Adult can toggle any. */
     private function assertCanToggle(Request $request, Chore $chore): void
     {
-        $restricted = in_array($request->user()->role, [HouseholdRole::Teen, HouseholdRole::Child], true);
+        $restricted = in_array($request->user()->currentRole(), [HouseholdRole::Teen, HouseholdRole::Child], true);
 
         abort_if($restricted && $chore->assigned_to !== $request->user()->id, 403);
     }

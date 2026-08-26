@@ -26,7 +26,7 @@ class CalendarEventRequest extends FormRequest
             // Scoped to the household so an event can't be pinned on an outsider.
             'attendees.*' => [
                 'integer',
-                Rule::exists('users', 'id')->where('household_id', $this->user()?->household_id),
+                Rule::exists('household_user', 'user_id')->where('household_id', $this->user()?->current_household_id)->where('pending', false),
             ],
         ];
     }

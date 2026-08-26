@@ -37,12 +37,15 @@ class JoinHouseholdUseCase
         $colour = $colours[$this->households->members($household)->count() % count($colours)];
 
         $this->users->update($user, [
-            'household_id' => $household->id,
+            'current_household_id' => $household->id,
+            'initials' => mb_strtoupper(mb_substr(trim($user->name), 0, 2)),
+            'colour' => $colour,
+        ]);
+
+        $user->households()->attach($household->id, [
             'role' => HouseholdRole::Adult,
             'pending' => true,
             'pending_reason' => PendingReason::Requested,
-            'initials' => mb_strtoupper(mb_substr(trim($user->name), 0, 2)),
-            'colour' => $colour,
         ]);
 
         return $household;

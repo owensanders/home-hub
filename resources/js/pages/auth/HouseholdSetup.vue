@@ -1,40 +1,25 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import AuthWizardLayout from '@/layouts/auth/AuthWizardLayout.vue';
-import { formatPlanPrice } from '@/lib/househub';
-import type { Plan } from '@/types/househub';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 type Mode = 'create' | 'join';
 type InviteRole = 'adult' | 'teen' | 'child';
-type Cycle = 'monthly' | 'annual';
-
-const props = defineProps<{ plans: Plan[] }>();
 
 const mode = ref<Mode>('create');
 
 const sizes = ['1 person', '2 people', '3 people', '4 people', '5 people', '6 or more'];
 const roles: InviteRole[] = ['adult', 'teen', 'child'];
-const cycles: { key: Cycle; label: string }[] = [
-    { key: 'monthly', label: 'Monthly' },
-    { key: 'annual', label: 'Annual' },
-];
 
 const createForm = useForm<{
     name: string;
-    address: string;
     size: string;
-    plan: string;
-    cycle: Cycle;
     invites: { email: string; role: InviteRole }[];
 }>({
     name: '',
-    address: '',
     size: sizes[3],
-    plan: 'free',
-    cycle: 'monthly',
     invites: [],
 });
 
@@ -111,58 +96,15 @@ function submitJoin(): void {
                     <InputError :message="createForm.errors.name" />
                 </div>
 
-                <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-[1.4fr_1fr]">
-                    <div class="flex flex-col gap-1.5">
-                        <label for="householdAddress" class="hh-label">
-                            Address <span class="font-medium text-hh-ink3">— optional, used for bin days and weather</span>
-                        </label>
-                        <input id="householdAddress" v-model="createForm.address" type="text" class="hh-input" placeholder="14 Elmgrove Road, Bristol" />
-                        <InputError :message="createForm.errors.address" />
-                    </div>
-                    <div class="flex flex-col gap-1.5">
-                        <label for="householdSize" class="hh-label">Household size</label>
-                        <select id="householdSize" v-model="createForm.size" class="hh-input font-semibold">
-                            <option v-for="option in sizes" :key="option" :value="option">{{ option }}</option>
-                        </select>
-                    </div>
+                <div class="flex flex-col gap-1.5">
+                    <label for="householdSize" class="hh-label">Household size</label>
+                    <select id="householdSize" v-model="createForm.size" class="hh-input font-semibold">
+                        <option v-for="option in sizes" :key="option" :value="option">{{ option }}</option>
+                    </select>
                 </div>
 
-                <div class="border-t border-hh-line pt-4">
-                    <div class="flex items-center justify-between">
-                        <div class="text-[13px] font-bold">Choose a plan</div>
-                        <div class="flex items-center gap-2 rounded-[12px] bg-hh-soft p-[4px]">
-                            <button
-                                v-for="option in cycles"
-                                :key="option.key"
-                                type="button"
-                                class="h-[30px] rounded-[9px] px-3 text-[12.5px] font-bold transition"
-                                :class="createForm.cycle === option.key ? 'bg-hh-card text-hh-ink' : 'bg-transparent text-hh-ink3'"
-                                @click="createForm.cycle = option.key"
-                            >
-                                {{ option.label }}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-                        <button
-                            v-for="plan in props.plans"
-                            :key="plan.slug"
-                            type="button"
-                            class="flex flex-col items-start gap-1 rounded-[16px] border-[1.5px] p-3.5 text-left transition-transform hover:-translate-y-0.5"
-                            :class="createForm.plan === plan.slug ? 'border-hh-coral bg-hh-card' : 'border-hh-line bg-transparent'"
-                            @click="createForm.plan = plan.slug"
-                        >
-                            <span class="flex w-full items-center justify-between text-[14px] font-extrabold tracking-[-0.01em]">
-                                {{ plan.name }}
-                                <span v-if="plan.tag" class="rounded-md bg-hh-coral px-1.5 py-0.5 text-[9.5px] font-extrabold text-white">
-                                    {{ plan.tag }}
-                                </span>
-                            </span>
-                            <span class="text-[13px] font-bold text-hh-ink2">{{ formatPlanPrice(plan.price[createForm.cycle]) }}</span>
-                        </button>
-                    </div>
-                    <InputError :message="createForm.errors.plan" />
+                <div class="rounded-[16px] bg-hh-soft px-4 py-3 text-[13px] leading-relaxed text-hh-ink2">
+                    Your household gets a free month, then £6.99/month — no card needed today.
                 </div>
 
                 <div class="border-t border-hh-line pt-4">

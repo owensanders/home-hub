@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\HouseholdSelectController;
 use App\Http\Controllers\Auth\HouseholdSetupController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
@@ -47,6 +48,12 @@ Route::middleware('auth')->group(function () {
 
     Route::get('household/done', [HouseholdSetupController::class, 'done'])
         ->name('household.done');
+
+    Route::get('household/select', [HouseholdSelectController::class, 'show'])
+        ->name('household.select');
+
+    Route::post('household/select', [HouseholdSelectController::class, 'store'])
+        ->name('household.select.store');
 
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');

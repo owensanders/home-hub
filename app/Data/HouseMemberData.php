@@ -31,12 +31,12 @@ class HouseMemberData extends Data
             initials: $user->initials ?? mb_strtoupper(mb_substr($user->name, 0, 2)),
             colour: $user->colour->cssVar(),
             email: $user->email,
-            role: $user->role->value,
-            roleLabel: $user->role->label(),
+            role: $user->pivot->role->value,
+            roleLabel: $user->pivot->role->label(),
             activity: $user->status_line ?? '',
             you: $user->id === $viewerId,
-            pending: $user->pending,
-            pendingReason: $user->pending_reason?->value,
+            pending: $user->pivot->pending,
+            pendingReason: $user->pivot->pending_reason?->value,
         );
     }
 }

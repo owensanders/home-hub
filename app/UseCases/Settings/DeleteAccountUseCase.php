@@ -21,7 +21,7 @@ class DeleteAccountUseCase
     /** @throws ValidationException */
     public function execute(User $user, bool $confirmHouseholdDeletion = false): void
     {
-        if ($user->household !== null && $user->role === HouseholdRole::Owner) {
+        if ($user->currentHousehold !== null && $user->currentRole() === HouseholdRole::Owner) {
             $this->deleteHouseholdIfSoleOwner($user, $confirmHouseholdDeletion);
         }
 
@@ -36,8 +36,8 @@ class DeleteAccountUseCase
     /** @throws ValidationException */
     private function deleteHouseholdIfSoleOwner(User $user, bool $confirmHouseholdDeletion): void
     {
-        $members = $this->households->members($user->household);
-        $hasOtherOwners = $members->contains(fn (User $m) => $m->role === HouseholdRole::Owner && $m->id !== $user->id);
+        $members = $this->households->members($user->currentHousehold);
+        $hasOtherOwners = $members->contains(fn (User $m) => $m->pivot->role === HouseholdRole::Owner && $m->id !== $user->id);
 
         if ($hasOtherOwners) {
             return;
@@ -51,6 +51,6 @@ class DeleteAccountUseCase
             ]);
         }
 
-        $this->households->delete($user->household);
+        $this->households->delete($user->currentHousehold);
     }
 }

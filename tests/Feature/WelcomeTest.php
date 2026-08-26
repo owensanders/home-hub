@@ -21,8 +21,7 @@ class WelcomeTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Welcome')
-                ->count('plans', 3)
-                ->where('plans.0.slug', 'free'));
+                ->where('plan.name', 'Home'));
     }
 
     #[Test]

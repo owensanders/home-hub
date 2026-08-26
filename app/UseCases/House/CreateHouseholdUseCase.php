@@ -10,7 +10,6 @@ use App\Enums\HouseholdRole;
 use App\Enums\Palette;
 use App\Models\Household;
 use App\Models\User;
-use Illuminate\Support\Str;
 
 class CreateHouseholdUseCase
 {
@@ -23,28 +22,26 @@ class CreateHouseholdUseCase
     /**
      * `size` is collected for the wizard's copy but has nowhere to live yet —
      * ponytail: not persisted, add a column when a feature actually reads it.
-     * `plan`/`cycle` are handled separately by the caller once the household
-     * exists (a household must exist before it can be Billable).
      *
-     * @param  array{name: string, address?: string|null, size?: string|null, plan?: string|null, cycle?: string|null, invites?: list<array{email: string, role: string}>}  $attributes
+     * @param  array{name: string, size?: string|null, invites?: list<array{email: string, role: string}>}  $attributes
      */
     public function execute(User $owner, array $attributes): Household
     {
         $household = $this->households->create([
             'name' => trim($attributes['name']),
-            'address' => $attributes['address'] ?? null,
+            'trial_ends_at' => now()->addDays(config('plans.trial_days')),
         ]);
 
         $this->users->update($owner, [
-            'household_id' => $household->id,
-            'role' => HouseholdRole::Owner,
+            'current_household_id' => $household->id,
             'initials' => mb_strtoupper(mb_substr(trim($owner->name), 0, 2)),
             'colour' => Palette::cases()[0],
         ]);
 
+        $owner->households()->attach($household->id, ['role' => HouseholdRole::Owner, 'pending' => false]);
+
         foreach ($attributes['invites'] ?? [] as $invite) {
             $this->inviteMember->execute($household, [
-                'name' => Str::before($invite['email'], '@'),
                 'email' => $invite['email'],
                 'role' => $invite['role'],
             ]);

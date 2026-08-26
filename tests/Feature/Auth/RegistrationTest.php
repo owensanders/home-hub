@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Household;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -45,5 +48,38 @@ class RegistrationTest extends TestCase
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('household.setup', absolute: false));
+    }
+
+    #[Test]
+    public function registeringViaASignedInviteLinkJoinsTheHouseholdAndReachesTheDashboard(): void
+    {
+        $household = Household::factory()->create();
+
+        $inviteUrl = URL::temporarySignedRoute('register', now()->addDays(7), [
+            'invite_household' => $household->id,
+            'invite_role' => 'adult',
+            'email' => 'margaret@parkerhouse.co.uk',
+        ]);
+
+        $this->get($inviteUrl)->assertOk();
+
+        $response = $this->post('/register', [
+            'name' => 'Margaret Parker',
+            'email' => 'margaret@parkerhouse.co.uk',
+            'password' => 'a-very-strong-password',
+            'terms' => true,
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('dashboard', absolute: false));
+
+        $user = User::where('email', 'margaret@parkerhouse.co.uk')->firstOrFail();
+        $this->assertSame($household->id, $user->current_household_id);
+        $this->assertDatabaseHas('household_user', [
+            'household_id' => $household->id,
+            'user_id' => $user->id,
+            'role' => 'adult',
+            'pending' => false,
+        ]);
     }
 }

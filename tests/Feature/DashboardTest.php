@@ -35,9 +35,26 @@ class DashboardTest extends TestCase
     }
 
     #[Test]
+    public function aPendingMemberDoesNotAppearInTheFamilyStrip(): void
+    {
+        $user = User::factory()->create();
+        User::factory()->create(['household_id' => $user->household_id, 'name' => 'Margaret Parker', 'pending' => true]);
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(function ($page) {
+                /** @var list<array<string, mixed>> $family */
+                $family = $page->toArray()['props']['dashboard']['family'];
+
+                $this->assertFalse(collect($family)->contains('name', 'Margaret Parker'));
+            });
+    }
+
+    #[Test]
     public function itShowsTonightsDinnerTodaysChoresAndTheDefaultShoppingList(): void
     {
-        $household = Household::create(['name' => 'The Parkers', 'location' => 'Bristol', 'streak_days' => 12]);
+        $household = Household::create(['name' => 'The Parkers', 'location' => 'Bristol', 'streak_days' => 12, 'trial_ends_at' => now()->addDays(30)]);
         $user = User::factory()->create(['household_id' => $household->id, 'name' => 'Sarah Parker']);
 
         $recipe = Recipe::factory()->create([

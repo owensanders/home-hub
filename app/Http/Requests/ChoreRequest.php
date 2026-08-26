@@ -14,7 +14,11 @@ class ChoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:120'],
-            'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')],
+            'assigned_to' => [
+                'nullable',
+                'integer',
+                Rule::exists('household_user', 'user_id')->where('household_id', $this->user()?->current_household_id)->where('pending', false),
+            ],
         ];
     }
 

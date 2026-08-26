@@ -107,6 +107,7 @@ class DeleteAccountTest extends TestCase
         $this->assertDatabaseMissing('households', ['id' => $household->id]);
         $this->assertDatabaseMissing('chores', ['id' => $chore->id]);
 
-        $this->assertDatabaseHas('users', ['id' => $member->id, 'household_id' => null]);
+        $this->assertDatabaseHas('users', ['id' => $member->id, 'current_household_id' => null]);
+        $this->assertDatabaseMissing('household_user', ['user_id' => $member->id, 'household_id' => $household->id]);
     }
 }

@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\HouseholdRole;
 use App\Enums\PendingReason;
+use App\Mail\HouseholdInviteMail;
 use App\Models\CalendarEvent;
 use App\Models\Chore;
 use App\Models\Household;
@@ -13,6 +14,7 @@ use App\Models\PlannedMeal;
 use App\Models\Recipe;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -24,7 +26,8 @@ class HouseTest extends TestCase
     public function itRendersTheHouseholdAndItsMembers(): void
     {
         $household = Household::create([
-            'name' => 'The Parkers', 'location' => 'Bristol', 'address' => '14 Elmgrove Road, Bristol', 'streak_days' => 12,
+            'name' => 'The Parkers', 'location' => 'Bristol', 'streak_days' => 12,
+            'trial_ends_at' => now()->addDays(30),
         ]);
         $owner = User::factory()->create(['household_id' => $household->id, 'role' => HouseholdRole::Owner]);
         User::factory()->create(['household_id' => $household->id, 'role' => HouseholdRole::Adult]);
@@ -36,55 +39,79 @@ class HouseTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('House')
                 ->where('house.houseName', 'The Parkers')
-                ->where('house.houseAddress', '14 Elmgrove Road, Bristol')
                 ->where('house.memberCount', 3)
                 ->where('house.houseStats.0.value', '2')
                 ->where('house.houseStats.1.value', '1')
                 ->count('house.members', 3)
                 ->count('house.roles', 4)
-                ->count('house.plans', 3)
-                ->where('house.plans.0.slug', 'free')
-                ->where('house.plans.0.current', true)
+                ->where('house.planStatus.onTrial', true)
+                ->where('house.planStatus.subscribed', false)
             );
     }
 
     #[Test]
-    public function itSwitchesAnUnsubscribedHouseholdToFreeWithoutContactingStripe(): void
+    public function itRefusesToStartCheckoutWhenBillingIsNotConfigured(): void
     {
         $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+        $owner->household->update(['trial_ends_at' => now()->addDays(30)]);
 
         $this->actingAs($owner)
-            ->patch('/house/plan', ['plan' => 'free', 'cycle' => 'monthly'])
-            ->assertRedirect()
-            ->assertSessionHas('toast', 'Plan updated');
-    }
-
-    #[Test]
-    public function itRejectsAnUnknownPlanSlug(): void
-    {
-        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
-
-        $this->actingAs($owner)
-            ->patch('/house/plan', ['plan' => 'ultra', 'cycle' => 'monthly'])
+            ->post('/house/subscribe')
             ->assertSessionHasErrors('plan');
     }
 
     #[Test]
-    public function itInvitesAMember(): void
+    public function itQueuesARegistrationInviteForANewEmail(): void
     {
+        Mail::fake();
+
         $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
 
         $this->actingAs($owner)
-            ->post('/house/invite', ['name' => 'Margaret Parker', 'email' => 'margaret@parkerhouse.co.uk', 'role' => 'adult'])
+            ->post('/house/invite', ['email' => 'margaret@parkerhouse.co.uk', 'role' => 'adult'])
             ->assertRedirect()
             ->assertSessionHas('toast', 'Invite sent to margaret@parkerhouse.co.uk');
 
-        $this->assertDatabaseHas('users', [
+        $this->assertDatabaseMissing('users', ['email' => 'margaret@parkerhouse.co.uk']);
+
+        Mail::assertQueued(HouseholdInviteMail::class, fn (HouseholdInviteMail $mail) => ! $mail->hasAccount
+            && $mail->household->id === $owner->household_id
+            && str_contains($mail->actionUrl, route('register', [], false)));
+    }
+
+    #[Test]
+    public function itInvitesAnExistingUserToANewHousehold(): void
+    {
+        Mail::fake();
+
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+        $existing = User::factory()->create(['email' => 'margaret@parkerhouse.co.uk']);
+
+        $this->actingAs($owner)
+            ->post('/house/invite', ['email' => 'margaret@parkerhouse.co.uk', 'role' => 'adult'])
+            ->assertRedirect()
+            ->assertSessionHas('toast', 'Invite sent to margaret@parkerhouse.co.uk');
+
+        $this->assertDatabaseHas('household_user', [
             'household_id' => $owner->household_id,
-            'email' => 'margaret@parkerhouse.co.uk',
+            'user_id' => $existing->id,
             'pending' => true,
             'pending_reason' => 'invited',
         ]);
+
+        Mail::assertQueued(HouseholdInviteMail::class, fn (HouseholdInviteMail $mail) => $mail->hasAccount
+            && $mail->household->id === $owner->household_id);
+    }
+
+    #[Test]
+    public function itRejectsInvitingSomeoneAlreadyInTheHousehold(): void
+    {
+        $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
+        $member = User::factory()->create(['household_id' => $owner->household_id]);
+
+        $this->actingAs($owner)
+            ->post('/house/invite', ['email' => $member->email, 'role' => 'adult'])
+            ->assertSessionHasErrors(['email']);
     }
 
     #[Test]
@@ -103,8 +130,8 @@ class HouseTest extends TestCase
             ->assertSessionHas('toast', "{$requester->name} approved — welcome to the household");
 
         $requester->refresh();
-        $this->assertFalse($requester->pending);
-        $this->assertNull($requester->pending_reason);
+        $this->assertFalse($requester->currentMembership()->pending);
+        $this->assertNull($requester->currentMembership()->pending_reason);
     }
 
     #[Test]
@@ -115,7 +142,7 @@ class HouseTest extends TestCase
 
         $this->actingAs($owner)->patch("/house/members/{$stranger->id}/approve")->assertNotFound();
 
-        $this->assertTrue($stranger->refresh()->pending);
+        $this->assertTrue($stranger->refresh()->currentMembership()->pending);
     }
 
     #[Test]
@@ -124,8 +151,8 @@ class HouseTest extends TestCase
         $owner = User::factory()->create(['role' => HouseholdRole::Owner]);
 
         $this->actingAs($owner)
-            ->post('/house/invite', ['name' => '', 'email' => '', 'role' => 'adult'])
-            ->assertSessionHasErrors(['name', 'email']);
+            ->post('/house/invite', ['email' => '', 'role' => 'adult'])
+            ->assertSessionHasErrors(['email']);
     }
 
     #[Test]
@@ -139,7 +166,7 @@ class HouseTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('toast', "{$member->name} is now Teen");
 
-        $this->assertSame(HouseholdRole::Teen, $member->refresh()->role);
+        $this->assertSame(HouseholdRole::Teen, $member->refresh()->currentRole());
     }
 
     #[Test]
@@ -151,7 +178,7 @@ class HouseTest extends TestCase
             ->patch("/house/members/{$owner->id}/role", ['role' => 'adult'])
             ->assertSessionHasErrors('role');
 
-        $this->assertSame(HouseholdRole::Owner, $owner->refresh()->role);
+        $this->assertSame(HouseholdRole::Owner, $owner->refresh()->currentRole());
     }
 
     #[Test]
@@ -165,7 +192,7 @@ class HouseTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(HouseholdRole::Adult, $owner->refresh()->role);
+        $this->assertSame(HouseholdRole::Adult, $owner->refresh()->currentRole());
     }
 
     #[Test]

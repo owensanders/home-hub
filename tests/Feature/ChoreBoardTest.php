@@ -50,6 +50,33 @@ class ChoreBoardTest extends TestCase
     }
 
     #[Test]
+    public function aPendingMemberDoesNotAppearInTheScoresAndCannotBeAssignedAChore(): void
+    {
+        $user = User::factory()->create();
+        $pending = User::factory()->create(['household_id' => $user->household_id, 'name' => 'Margaret Parker', 'pending' => true]);
+
+        $this->actingAs($user)
+            ->get('/chores')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->count('scores', 1));
+
+        $this->actingAs($user)
+            ->post('/chores', ['name' => 'Clean the gutters', 'assigned_to' => $pending->id])
+            ->assertSessionHasErrors('assigned_to');
+    }
+
+    #[Test]
+    public function itRejectsAssigningAChoreToAMemberOfAnotherHousehold(): void
+    {
+        $user = User::factory()->create();
+        $stranger = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/chores', ['name' => 'Clean the gutters', 'assigned_to' => $stranger->id])
+            ->assertSessionHasErrors('assigned_to');
+    }
+
+    #[Test]
     public function tickingAChoreMarksItDoneAndUntickingSendsItBackToToday(): void
     {
         $user = User::factory()->create();

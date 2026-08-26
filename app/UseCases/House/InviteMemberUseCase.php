@@ -4,41 +4,55 @@ declare(strict_types=1);
 
 namespace App\UseCases\House;
 
-use App\Contracts\Repositories\HouseholdRepositoryInterface;
 use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Enums\HouseholdRole;
-use App\Enums\Palette;
 use App\Enums\PendingReason;
+use App\Mail\HouseholdInviteMail;
 use App\Models\Household;
-use App\Models\User;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\ValidationException;
 
 class InviteMemberUseCase
 {
     public function __construct(
-        private readonly HouseholdRepositoryInterface $households,
         private readonly UserRepositoryInterface $users,
     ) {}
 
-    /** @param  array{name: string, email: string, role: string}  $attributes */
-    public function execute(Household $household, array $attributes): User
+    /** @param  array{email: string, role: string}  $attributes */
+    public function execute(Household $household, array $attributes): void
     {
-        $name = trim($attributes['name']);
-        $colours = Palette::cases();
-        $colour = $colours[$this->households->members($household)->count() % count($colours)];
+        $email = $attributes['email'];
 
-        // ponytail: invite is data-only — creates a pending User row, no email is
-        // sent. Wire real delivery when this needs to leave the building.
-        return $this->users->create([
-            'household_id' => $household->id,
-            'name' => $name,
-            'initials' => mb_strtoupper(mb_substr($name, 0, 2)),
-            'colour' => $colour,
-            'role' => HouseholdRole::from($attributes['role']),
-            'pending' => true,
-            'pending_reason' => PendingReason::Invited,
-            'email' => $attributes['email'],
-            'password' => Str::random(40),
+        if ($household->members()->where('email', $email)->exists()) {
+            throw ValidationException::withMessages(['email' => 'This person is already part of the household.']);
+        }
+
+        $existing = $this->users->findByEmail($email);
+
+        if ($existing !== null) {
+            $existing->households()->attach($household->id, [
+                'role' => HouseholdRole::from($attributes['role']),
+                'pending' => true,
+                'pending_reason' => PendingReason::Invited,
+            ]);
+
+            $actionUrl = URL::temporarySignedRoute('household-invites.accept', now()->addDays(7), [
+                'household' => $household->id,
+                'member' => $existing->id,
+            ]);
+
+            Mail::to($email)->queue(new HouseholdInviteMail($household, $actionUrl, hasAccount: true));
+
+            return;
+        }
+
+        $actionUrl = URL::temporarySignedRoute('register', now()->addDays(7), [
+            'invite_household' => $household->id,
+            'invite_role' => $attributes['role'],
+            'email' => $email,
         ]);
+
+        Mail::to($email)->queue(new HouseholdInviteMail($household, $actionUrl, hasAccount: false));
     }
 }

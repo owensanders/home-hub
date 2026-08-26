@@ -6,9 +6,11 @@ namespace Tests\Feature\Auth;
 
 use App\Enums\HouseholdRole;
 use App\Enums\PendingReason;
+use App\Mail\HouseholdInviteMail;
 use App\Models\Household;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -19,11 +21,12 @@ class HouseholdSetupTest extends TestCase
     #[Test]
     public function aHouseholdlessUserCanCreateAHouseholdAndBecomesOwner(): void
     {
+        Mail::fake();
+
         $user = User::factory()->create(['household_id' => null]);
 
         $response = $this->actingAs($user)->post('/household/setup', [
             'name' => 'The Parker household',
-            'address' => '14 Elmgrove Road, Bristol',
             'size' => '4 people',
             'invites' => [
                 ['email' => 'james@parkerhouse.co.uk', 'role' => 'adult'],
@@ -34,47 +37,15 @@ class HouseholdSetupTest extends TestCase
 
         $user->refresh();
         $this->assertNotNull($user->household_id);
-        $this->assertSame(HouseholdRole::Owner, $user->role);
+        $this->assertSame(HouseholdRole::Owner, $user->currentRole());
 
         $household = $user->household;
         $this->assertSame('The Parker household', $household->name);
         $this->assertNotNull($household->join_code);
+        $this->assertTrue($household->isOnTrial());
 
-        $this->assertDatabaseHas('users', [
-            'email' => 'james@parkerhouse.co.uk',
-            'household_id' => $household->id,
-            'pending' => true,
-        ]);
-    }
-
-    #[Test]
-    public function creatingAHouseholdOnTheFreePlanDoesNotContactStripe(): void
-    {
-        $user = User::factory()->create(['household_id' => null]);
-
-        $response = $this->actingAs($user)->post('/household/setup', [
-            'name' => 'The Parker household',
-            'plan' => 'free',
-            'cycle' => 'monthly',
-        ]);
-
-        $response->assertRedirect(route('household.done', absolute: false));
-        $this->assertNotNull($user->refresh()->household_id);
-    }
-
-    #[Test]
-    public function anUnknownPlanSlugFailsValidation(): void
-    {
-        $user = User::factory()->create(['household_id' => null]);
-
-        $response = $this->actingAs($user)->post('/household/setup', [
-            'name' => 'The Parker household',
-            'plan' => 'ultra',
-            'cycle' => 'monthly',
-        ]);
-
-        $response->assertSessionHasErrors('plan');
-        $this->assertNull($user->refresh()->household_id);
+        Mail::assertQueued(HouseholdInviteMail::class, fn (HouseholdInviteMail $mail) => ! $mail->hasAccount
+            && $mail->household->id === $household->id);
     }
 
     #[Test]
@@ -99,9 +70,9 @@ class HouseholdSetupTest extends TestCase
 
         $user->refresh();
         $this->assertSame($household->id, $user->household_id);
-        $this->assertSame(HouseholdRole::Adult, $user->role);
-        $this->assertTrue($user->pending);
-        $this->assertSame(PendingReason::Requested, $user->pending_reason);
+        $this->assertSame(HouseholdRole::Adult, $user->currentRole());
+        $this->assertTrue($user->currentMembership()->pending);
+        $this->assertSame(PendingReason::Requested, $user->currentMembership()->pending_reason);
     }
 
     #[Test]
@@ -132,11 +103,11 @@ class HouseholdSetupTest extends TestCase
     }
 
     #[Test]
-    public function aUserWhoAlreadyHasAHouseholdIsRedirectedAwayFromSetup(): void
+    public function aNonPendingHousedUserCanStillReachSetupToAddAnotherHousehold(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get('/household/setup')->assertRedirect(route('dashboard', absolute: false));
+        $this->actingAs($user)->get('/household/setup')->assertOk();
     }
 
     #[Test]

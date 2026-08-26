@@ -48,7 +48,7 @@ class PlannedMealRequest extends FormRequest
             'cook_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('users', 'id')->where('household_id', $this->user()?->household_id),
+                Rule::exists('household_user', 'user_id')->where('household_id', $this->user()?->current_household_id)->where('pending', false),
             ],
         ];
     }

@@ -69,7 +69,7 @@ class GetMealPlannerUseCase
                 ->map(RecipeData::fromModel(...))
                 ->values()
                 ->all(),
-            'members' => $this->households->members($household)
+            'members' => $this->households->activeMembers($household)
                 ->map(MemberData::fromModel(...))
                 ->values()
                 ->all(),

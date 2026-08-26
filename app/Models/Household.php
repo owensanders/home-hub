@@ -7,6 +7,7 @@ namespace App\Models;
 use Database\Factories\HouseholdFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Laravel\Cashier\Billable;
@@ -17,8 +18,10 @@ use Laravel\Cashier\Billable;
  * @property string|null $join_code
  * @property bool $join_code_enabled
  * @property string|null $location
- * @property string|null $address
  * @property int $streak_days
+ * @property \Illuminate\Support\Carbon|null $streak_last_active_date
+ * @property \Illuminate\Support\Carbon|null $trial_ends_at
+ * @property-read HouseholdUser|null $pivot Present when loaded through a `User::households()` query.
  */
 class Household extends Model
 {
@@ -28,11 +31,16 @@ class Household extends Model
     use HasFactory;
 
     /** @var list<string> */
-    protected $fillable = ['name', 'join_code', 'join_code_enabled', 'location', 'address', 'streak_days'];
+    protected $fillable = ['name', 'join_code', 'join_code_enabled', 'location', 'streak_days', 'streak_last_active_date', 'trial_ends_at'];
 
     protected function casts(): array
     {
-        return ['streak_days' => 'integer', 'join_code_enabled' => 'boolean'];
+        return [
+            'streak_days' => 'integer',
+            'streak_last_active_date' => 'date',
+            'join_code_enabled' => 'boolean',
+            'trial_ends_at' => 'datetime',
+        ];
     }
 
     protected static function booted(): void
@@ -58,10 +66,14 @@ class Household extends Model
         return $code;
     }
 
-    /** @return HasMany<User, $this> */
-    public function members(): HasMany
+    /** @return BelongsToMany<User, $this, HouseholdUser> */
+    public function members(): BelongsToMany
     {
-        return $this->hasMany(User::class);
+        return $this->belongsToMany(User::class)
+            ->using(HouseholdUser::class)
+            ->withPivot(['role', 'pending', 'pending_reason'])
+            ->withTimestamps()
+            ->orderBy('users.id');
     }
 
     /** @return HasMany<ShoppingList, $this> */
@@ -118,22 +130,16 @@ class Household extends Model
         return $this->hasMany(Document::class);
     }
 
-    /** The config('plans') slug for this household's active subscription, or 'free' if unsubscribed. */
-    public function planSlug(): string
+    /** True while the household's free trial hasn't ended and it isn't subscribed yet. */
+    public function isOnTrial(): bool
     {
-        $subscription = $this->subscription('default');
-        $activePrice = $subscription?->active() === true ? $subscription->stripe_price : null;
+        return ! $this->subscribed('default') && $this->trial_ends_at?->isFuture() === true;
+    }
 
-        if ($activePrice === null) {
-            return 'free';
-        }
-
-        foreach (config('plans') as $slug => $plan) {
-            if (in_array($activePrice, $plan['stripe_price'], true)) {
-                return $slug;
-            }
-        }
-
-        return 'free';
+    /** True once the trial has ended and the household still isn't subscribed. */
+    public function needsToSubscribe(): bool
+    {
+        return ! $this->subscribed('default')
+            && ($this->trial_ends_at === null || $this->trial_ends_at->isPast());
     }
 }

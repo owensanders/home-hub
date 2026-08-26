@@ -74,6 +74,33 @@ class MealPlannerTest extends TestCase
     }
 
     #[Test]
+    public function aPendingMemberDoesNotAppearInTheCookDropdownAndCannotBeAssigned(): void
+    {
+        $user = User::factory()->create();
+        $pending = User::factory()->create(['household_id' => $user->household_id, 'name' => 'Margaret Parker', 'pending' => true]);
+        $recipe = Recipe::factory()->create(['household_id' => $user->household_id, 'name' => 'Veg lasagne']);
+
+        $this->actingAs($user)
+            ->get('/meals')
+            ->assertOk()
+            ->assertInertia(function ($page) {
+                /** @var list<array<string, mixed>> $members */
+                $members = $page->toArray()['props']['members'];
+
+                $this->assertFalse(collect($members)->contains('name', 'Margaret Parker'));
+            });
+
+        $this->actingAs($user)
+            ->post('/meals', [
+                'recipe_id' => $recipe->id,
+                'planned_on' => '2026-08-07',
+                'slot' => 'dinner',
+                'cook_id' => $pending->id,
+            ])
+            ->assertSessionHasErrors('cook_id');
+    }
+
+    #[Test]
     public function itReschedulesAMealToAnotherDay(): void
     {
         $user = User::factory()->create();

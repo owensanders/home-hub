@@ -6,8 +6,8 @@ namespace App\Models;
 
 use App\Enums\HouseholdRole;
 use App\Enums\Palette;
-use App\Enums\PendingReason;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -17,18 +17,17 @@ use Illuminate\Notifications\Notifiable;
 
 /**
  * @property int $id
- * @property int|null $household_id
+ * @property int|null $current_household_id
+ * @property-read int|null $household_id Alias for `current_household_id` — see `householdId()` below.
  * @property string $name
  * @property string|null $initials
  * @property \App\Enums\Palette $colour
  * @property string|null $status_line
- * @property \App\Enums\HouseholdRole $role
- * @property bool $pending
- * @property \App\Enums\PendingReason|null $pending_reason
  * @property string $email
  * @property \Illuminate\Support\Carbon|null $email_verified_at
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
+ * @property-read HouseholdUser|null $pivot Present when loaded through a `Household::members()`/`User::households()` query.
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -37,14 +36,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /** @var list<string> */
     protected $fillable = [
-        'household_id',
+        'current_household_id',
         'name',
         'initials',
         'colour',
         'status_line',
-        'role',
-        'pending',
-        'pending_reason',
         'email',
         'password',
     ];
@@ -61,16 +57,63 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'colour' => Palette::class,
-            'role' => HouseholdRole::class,
-            'pending' => 'boolean',
-            'pending_reason' => PendingReason::class,
         ];
     }
 
     /** @return BelongsTo<Household, $this> */
+    public function currentHousehold(): BelongsTo
+    {
+        return $this->belongsTo(Household::class, 'current_household_id');
+    }
+
+    /**
+     * Alias kept so "the acting user's own household" call sites read naturally.
+     *
+     * @return BelongsTo<Household, $this>
+     */
     public function household(): BelongsTo
     {
-        return $this->belongsTo(Household::class);
+        return $this->currentHousehold();
+    }
+
+    /** @return BelongsToMany<Household, $this, HouseholdUser> */
+    public function households(): BelongsToMany
+    {
+        return $this->belongsToMany(Household::class)
+            ->using(HouseholdUser::class)
+            ->withPivot(['role', 'pending', 'pending_reason'])
+            ->withTimestamps();
+    }
+
+    public function currentMembership(): ?HouseholdUser
+    {
+        if ($this->current_household_id === null) {
+            return null;
+        }
+
+        /** @var HouseholdUser|null */
+        return HouseholdUser::query()
+            ->where('user_id', $this->id)
+            ->where('household_id', $this->current_household_id)
+            ->first();
+    }
+
+    public function currentRole(): ?HouseholdRole
+    {
+        return $this->currentMembership()?->role;
+    }
+
+    /**
+     * Read-only alias for `current_household_id` — kept because many existing
+     * call sites (feature-test fixtures, other tables' own `household_id`
+     * scoping) read "the acting user's household" this way. Never write
+     * through this; membership writes go through `households()`/`HouseholdUser`.
+     *
+     * @return Attribute<int|null, never>
+     */
+    protected function householdId(): Attribute
+    {
+        return Attribute::make(get: fn () => $this->current_household_id);
     }
 
     /** @return HasMany<Chore, $this> */

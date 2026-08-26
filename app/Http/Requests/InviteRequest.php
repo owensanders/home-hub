@@ -14,8 +14,7 @@ class InviteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'email' => ['required', 'email', 'max:255'],
             'role' => ['required', Rule::enum(HouseholdRole::class)],
         ];
     }
@@ -24,16 +23,14 @@ class InviteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Add a name and an email to invite someone',
-            'email.required' => 'Add a name and an email to invite someone',
+            'email.required' => 'Add an email to invite someone',
         ];
     }
 
-    /** @return array{name: string, email: string, role: string} */
+    /** @return array{email: string, role: string} */
     public function inviteAttributes(): array
     {
         return [
-            'name' => trim((string) $this->validated('name')),
             'email' => (string) $this->validated('email'),
             'role' => (string) $this->validated('role'),
         ];

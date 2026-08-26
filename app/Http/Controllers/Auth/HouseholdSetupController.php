@@ -4,62 +4,34 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
-use App\Data\PlanData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\HouseholdJoinRequest;
 use App\Http\Requests\Auth\HouseholdSetupRequest;
-use App\UseCases\House\ChangeHouseholdPlanUseCase;
 use App\UseCases\House\CreateHouseholdUseCase;
 use App\UseCases\House\JoinHouseholdUseCase;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use RuntimeException;
-use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class HouseholdSetupController extends Controller
 {
     public function create(Request $request): Response|RedirectResponse
     {
-        if ($request->user()->household_id !== null) {
-            return $this->redirectAlreadyHoused($request);
+        if ($request->user()->currentMembership()?->pending === true) {
+            return to_route('household.done');
         }
 
-        return Inertia::render('auth/HouseholdSetup', ['plans' => PlanData::catalog()]);
+        return Inertia::render('auth/HouseholdSetup');
     }
 
-    public function store(
-        HouseholdSetupRequest $request,
-        CreateHouseholdUseCase $createHousehold,
-        ChangeHouseholdPlanUseCase $changePlan,
-    ): RedirectResponse|SymfonyResponse {
-        if ($request->user()->household_id !== null) {
-            return $this->redirectAlreadyHoused($request);
+    public function store(HouseholdSetupRequest $request, CreateHouseholdUseCase $createHousehold): RedirectResponse
+    {
+        if ($request->user()->currentMembership()?->pending === true) {
+            return to_route('household.done');
         }
 
-        $attributes = $request->householdAttributes();
-        $household = $createHousehold->execute($request->user(), $attributes);
-
-        if (! blank($attributes['plan']) && $attributes['plan'] !== 'free') {
-            try {
-                $checkoutUrl = $changePlan->execute(
-                    $household,
-                    $attributes['plan'],
-                    (string) $attributes['cycle'],
-                    successUrl: route('household.done'),
-                    cancelUrl: route('household.done'),
-                );
-
-                if ($checkoutUrl !== null) {
-                    return Inertia::location($checkoutUrl);
-                }
-            } catch (RuntimeException) {
-                // The chosen plan isn't purchasable yet (e.g. Stripe price not configured) —
-                // the household still exists, so fall through and land it on Free rather than
-                // losing the signup.
-            }
-        }
+        $household = $createHousehold->execute($request->user(), $request->householdAttributes());
 
         return to_route('household.done')->with('householdSetup', [
             'mode' => 'create',
@@ -70,8 +42,8 @@ class HouseholdSetupController extends Controller
 
     public function join(HouseholdJoinRequest $request, JoinHouseholdUseCase $joinHousehold): RedirectResponse
     {
-        if ($request->user()->household_id !== null) {
-            return $this->redirectAlreadyHoused($request);
+        if ($request->user()->currentMembership()?->pending === true) {
+            return to_route('household.done');
         }
 
         $household = $joinHousehold->execute($request->user(), (string) $request->validated('code'));
@@ -90,16 +62,13 @@ class HouseholdSetupController extends Controller
         $user = $request->user();
         $household = $user?->household;
 
+        $pending = $user?->currentMembership()?->pending === true;
+
         return Inertia::render('auth/HouseholdDone', [
-            'mode' => $setup['mode'] ?? ($user?->pending ? 'join' : 'create'),
+            'mode' => $setup['mode'] ?? ($pending ? 'join' : 'create'),
             'householdName' => $setup['householdName'] ?? $household->name ?? '',
             'inviteCount' => $setup['inviteCount'] ?? 0,
-            'pending' => $user !== null && $user->pending,
+            'pending' => $pending,
         ]);
-    }
-
-    private function redirectAlreadyHoused(Request $request): RedirectResponse
-    {
-        return $request->user()->pending ? to_route('household.done') : to_route('dashboard');
     }
 }

@@ -7,17 +7,17 @@ namespace App\Http\Controllers;
 use App\Enums\HouseholdRole;
 use App\Http\Requests\InviteRequest;
 use App\Http\Requests\JoinCodeToggleRequest;
-use App\Http\Requests\PlanUpdateRequest;
 use App\Http\Requests\RoleRequest;
+use App\Models\Household;
 use App\Models\User;
 use App\Traits\ResolvesHouseholdTrait;
 use App\UseCases\House\ApproveMemberUseCase;
-use App\UseCases\House\ChangeHouseholdPlanUseCase;
 use App\UseCases\House\ChangeMemberRoleUseCase;
 use App\UseCases\House\GetHouseUseCase;
 use App\UseCases\House\InviteMemberUseCase;
 use App\UseCases\House\RegenerateJoinCodeUseCase;
 use App\UseCases\House\RemoveMemberUseCase;
+use App\UseCases\House\SubscribeHouseholdUseCase;
 use App\UseCases\House\ToggleJoinCodeUseCase;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,36 +39,41 @@ class HouseController extends Controller
 
     public function invite(InviteRequest $request, InviteMemberUseCase $invite): RedirectResponse
     {
-        $member = $invite->execute($this->household($request), $request->inviteAttributes());
+        $attributes = $request->inviteAttributes();
+        $invite->execute($this->household($request), $attributes);
 
-        return back()->with('toast', "Invite sent to {$member->email}");
+        return back()->with('toast', "Invite sent to {$attributes['email']}");
     }
 
     public function updateRole(RoleRequest $request, User $member, ChangeMemberRoleUseCase $change): RedirectResponse
     {
-        $this->assertOwned($request, $member);
+        $household = $this->household($request);
+        $this->assertOwned($member, $household);
 
-        $updated = $change->execute($member, HouseholdRole::from($request->validated('role')));
+        $role = HouseholdRole::from($request->validated('role'));
+        $updated = $change->execute($member, $household, $role);
 
-        return back()->with('toast', "{$updated->name} is now {$updated->role->label()}");
+        return back()->with('toast', "{$updated->name} is now {$role->label()}");
     }
 
     public function approve(Request $request, User $member, ApproveMemberUseCase $approve): RedirectResponse
     {
-        $this->assertOwned($request, $member);
+        $household = $this->household($request);
+        $this->assertOwned($member, $household);
 
-        $approved = $approve->execute($member);
+        $approved = $approve->execute($member, $household);
 
         return back()->with('toast', "{$approved->name} approved — welcome to the household");
     }
 
     public function destroy(Request $request, User $member, RemoveMemberUseCase $remove): RedirectResponse
     {
-        $this->assertOwned($request, $member);
+        $household = $this->household($request);
+        $this->assertOwned($member, $household);
 
         $name = $member->name;
-        $wasPending = $member->pending;
-        $remove->execute($member);
+        $wasPending = $member->households()->where('households.id', $household->id)->first()?->pivot->pending === true;
+        $remove->execute($member, $household);
 
         return back()->with('toast', $wasPending ? "{$name} — invite cancelled" : "{$name} removed from the household");
     }
@@ -87,13 +92,11 @@ class HouseController extends Controller
         return back()->with('toast', 'New invite code generated');
     }
 
-    public function updatePlan(PlanUpdateRequest $request, ChangeHouseholdPlanUseCase $changePlan): SymfonyResponse
+    public function subscribe(Request $request, SubscribeHouseholdUseCase $subscribe): SymfonyResponse
     {
         try {
-            $checkoutUrl = $changePlan->execute(
+            $checkoutUrl = $subscribe->execute(
                 $this->household($request),
-                (string) $request->validated('plan'),
-                (string) $request->validated('cycle'),
                 successUrl: route('house.index'),
                 cancelUrl: route('house.index'),
             );
@@ -105,11 +108,11 @@ class HouseController extends Controller
             return Inertia::location($checkoutUrl);
         }
 
-        return back()->with('toast', 'Plan updated');
+        return back()->with('toast', 'You are already subscribed');
     }
 
-    private function assertOwned(Request $request, User $member): void
+    private function assertOwned(User $member, Household $household): void
     {
-        abort_if($member->household_id !== $this->household($request)->id, 404);
+        abort_if(! $member->households()->where('households.id', $household->id)->exists(), 404);
     }
 }

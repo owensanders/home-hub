@@ -8,6 +8,7 @@ use App\Enums\ChoreStatus;
 use App\Enums\HouseholdRole;
 use App\Enums\MealSlot;
 use App\Enums\Palette;
+use App\Enums\PendingReason;
 use App\Models\Household;
 use App\Models\Recipe;
 use App\Models\ShoppingList;
@@ -17,6 +18,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Laravel\Cashier\Subscription;
 
 /**
  * The Parker household — the demo data the HouseHub design was drawn against.
@@ -28,8 +30,20 @@ class HouseHubSeeder extends Seeder
         $household = Household::create([
             'name' => 'The Parkers',
             'location' => 'Bristol',
-            'address' => '14 Elmgrove Road, Bristol',
             'streak_days' => 12,
+            'streak_last_active_date' => today(),
+            'trial_ends_at' => now()->addDays(30),
+        ]);
+
+        // Seeded as already subscribed rather than mid-trial, so the demo
+        // account shows the "paid" state of the app out of the box.
+        Subscription::create([
+            'household_id' => $household->id,
+            'type' => 'default',
+            'stripe_id' => 'sub_dev_test',
+            'stripe_status' => 'active',
+            'stripe_price' => 'price_home_monthly_dev',
+            'quantity' => 1,
         ]);
 
         $members = $this->seedMembers($household);
@@ -55,28 +69,31 @@ class HouseHubSeeder extends Seeder
 
         foreach ($people as [$key, $name, $initials, $colour, $status, $role]) {
             $members[$key] = User::create([
-                'household_id' => $household->id,
+                'current_household_id' => $household->id,
                 'name' => $name,
                 'initials' => $initials,
                 'colour' => $colour,
                 'status_line' => $status,
-                'role' => $role,
                 'email' => "{$key}@househub.test",
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
             ]);
+            $members[$key]->households()->attach($household->id, ['role' => $role, 'pending' => false]);
         }
 
-        User::create([
-            'household_id' => $household->id,
+        $margaret = User::create([
+            'current_household_id' => $household->id,
             'name' => 'Margaret Parker',
             'initials' => 'MP',
             'colour' => Palette::Coral,
             'status_line' => null,
-            'role' => HouseholdRole::Adult,
-            'pending' => true,
             'email' => 'margaret@parkerhouse.co.uk',
             'password' => Hash::make(Str::random(40)),
+        ]);
+        $margaret->households()->attach($household->id, [
+            'role' => HouseholdRole::Adult,
+            'pending' => true,
+            'pending_reason' => PendingReason::Invited,
         ]);
 
         return $members;

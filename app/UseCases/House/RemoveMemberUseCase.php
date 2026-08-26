@@ -9,6 +9,7 @@ use App\Contracts\Repositories\ChoreRepositoryInterface;
 use App\Contracts\Repositories\HouseholdRepositoryInterface;
 use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Enums\HouseholdRole;
+use App\Models\Household;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
@@ -28,24 +29,22 @@ class RemoveMemberUseCase
      * other attendees, are left in place — the `cook_id`/attendee-pivot
      * foreign keys null/detach those automatically when the user row goes.
      *
+     * ponytail: deletes the whole user row rather than just detaching this
+     * household — matches prior behavior; per-household removal for a user
+     * in several households isn't requested yet.
+     *
      * @throws ValidationException
      */
-    public function execute(User $member): void
+    public function execute(User $member, Household $household): void
     {
-        if ($member->role === HouseholdRole::Owner && $this->isSoleOwner($member)) {
+        $currentRole = $member->households()->where('households.id', $household->id)->first()?->pivot->role;
+
+        if ($currentRole === HouseholdRole::Owner && $this->households->isSoleOwner($household, $member)) {
             throw ValidationException::withMessages(['member' => "You're the only owner — promote someone else first."]);
         }
 
         $this->chores->deleteAssignedTo($member);
         $this->events->deleteSoleAttendeeEventsFor($member);
         $this->users->delete($member);
-    }
-
-    private function isSoleOwner(User $member): bool
-    {
-        return $this->households->members($member->household)
-            ->where('role', HouseholdRole::Owner)
-            ->where('id', '!=', $member->id)
-            ->isEmpty();
     }
 }

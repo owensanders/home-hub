@@ -198,9 +198,9 @@ class HouseholdRoleTest extends TestCase
         $this->actingAs($adult)->patch("/house/members/{$owner->id}/role", ['role' => 'adult'])->assertForbidden();
         $this->actingAs($adult)->patch("/house/members/{$adult->id}/role", ['role' => 'owner'])->assertForbidden();
         $this->actingAs($adult)->delete("/house/members/{$owner->id}")->assertForbidden();
-        $this->actingAs($adult)->post('/house/invite', ['name' => 'Someone', 'email' => 'someone@example.com', 'role' => 'adult'])->assertForbidden();
+        $this->actingAs($adult)->post('/house/invite', ['email' => 'someone@example.com', 'role' => 'adult'])->assertForbidden();
 
-        $this->assertSame(HouseholdRole::Owner, $owner->refresh()->role);
+        $this->assertSame(HouseholdRole::Owner, $owner->refresh()->currentRole());
         $this->assertDatabaseHas('users', ['id' => $owner->id]);
     }
 }

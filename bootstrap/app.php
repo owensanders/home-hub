@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureHasHousehold;
 use App\Http\Middleware\EnsureHouseholdRole;
+use App\Http\Middleware\EnsureTrialActive;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureHouseholdRole::class,
             'household' => EnsureHasHousehold::class,
+            'trial.active' => EnsureTrialActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -67,7 +67,7 @@ class GetDashboardUseCase
                 $remaining,
             ),
             streakDays: $household->streak_days,
-            family: $this->households->members($household)->map(MemberData::fromModel(...))->values()->all(),
+            family: $this->households->activeMembers($household)->map(MemberData::fromModel(...))->values()->all(),
             tonight: $tonight !== null ? PlannedMealData::fromModel($tonight) : null,
             shoppingList: $list !== null ? ShoppingListData::fromModel($list) : null,
             chores: $todays->map(ChoreData::fromModel(...))->values()->all(),

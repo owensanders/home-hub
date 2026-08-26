@@ -237,27 +237,33 @@ export interface HouseRole {
     count: number;
 }
 
-export interface PlanFeature {
-    text: string;
-    included: boolean;
-}
-
 export interface Plan {
-    slug: string;
     name: string;
-    tag: string | null;
-    highlighted: boolean;
-    price: { monthly: number; annual: number };
+    price: number;
     sub: string;
     cta: string;
     note: string;
-    features: PlanFeature[];
-    current: boolean;
+    features: string[];
+}
+
+export interface PlanStatus {
+    onTrial: boolean;
+    trialEndsLabel: string | null;
+    subscribed: boolean;
+    price: number;
+}
+
+export interface HouseholdOption {
+    id: number;
+    name: string;
+    role: string;
+    roleLabel: string;
+    memberCount: number;
+    memberAvatars: { initials: string; colour: string }[];
 }
 
 export interface House {
     houseName: string;
-    houseAddress: string;
     houseCreated: string;
     joinCode: string;
     joinCodeEnabled: boolean;
@@ -266,7 +272,7 @@ export interface House {
     roleOptions: RoleOption[];
     members: HouseMember[];
     roles: HouseRole[];
-    plans: Plan[];
+    planStatus: PlanStatus;
 }
 
 export interface DocumentFolder {

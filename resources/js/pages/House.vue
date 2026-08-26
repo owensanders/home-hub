@@ -3,19 +3,17 @@ import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { formatPlanPrice } from '@/lib/househub';
 import type { House } from '@/types/househub';
 import { router, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
 
 const props = defineProps<{ house: House }>();
 
-const invite = useForm({ name: '', email: '', role: 'adult' });
-const planCycle = ref<'monthly' | 'annual'>('monthly');
+const invite = useForm({ email: '', role: 'adult' });
 
-function changePlan(slug: string): void {
-    router.patch(route('house.plan.update'), { plan: slug, cycle: planCycle.value }, { preserveScroll: true });
+function subscribe(): void {
+    router.post(route('house.subscribe'), {}, { preserveScroll: true });
 }
 
 function sendInvite(): void {
-    if (invite.name.trim() === '' || invite.email.trim() === '') {
+    if (invite.email.trim() === '') {
         return;
     }
 
@@ -59,7 +57,7 @@ function regenerateJoinCode(): void {
                 <div class="relative min-w-0 flex-1">
                     <div class="text-[11.5px] font-bold uppercase tracking-[0.09em] text-hh-onhero2">Household</div>
                     <div class="mt-2 text-4xl font-black leading-[1.05] tracking-[-0.03em]">{{ props.house.houseName }}</div>
-                    <div class="mt-2 text-sm text-hh-onhero2">{{ props.house.houseAddress }} · created {{ props.house.houseCreated }}</div>
+                    <div class="mt-2 text-sm text-hh-onhero2">created {{ props.house.houseCreated }}</div>
                 </div>
 
                 <div class="relative flex gap-2.5">
@@ -138,12 +136,6 @@ function regenerateJoinCode(): void {
                         <div class="mb-2.5 text-[13px] font-bold">Invite someone</div>
                         <form class="flex flex-col gap-2 sm:flex-row" @submit.prevent="sendInvite">
                             <input
-                                v-model="invite.name"
-                                placeholder="Name"
-                                aria-label="Name"
-                                class="h-[46px] w-full rounded-[13px] border border-hh-line bg-hh-sunk px-3.5 text-sm placeholder:text-hh-ink3 sm:w-[170px]"
-                            />
-                            <input
                                 v-model="invite.email"
                                 type="email"
                                 placeholder="their@email.co.uk"
@@ -166,9 +158,7 @@ function regenerateJoinCode(): void {
                                 Send invite
                             </button>
                         </form>
-                        <div class="mt-2.5 text-[12.5px] text-hh-ink3">
-                            Invites expire after 7 days. Children get a simplified view with chores and the calendar only.
-                        </div>
+                        <div class="mt-2.5 text-[12.5px] text-hh-ink3">Invites expire after 7 days.</div>
 
                         <div class="my-4 flex items-center gap-3 text-[11.5px] font-semibold text-hh-ink3">
                             <span class="h-px flex-1 bg-hh-line"></span>
@@ -215,42 +205,37 @@ function regenerateJoinCode(): void {
                 <div class="flex flex-col gap-4">
                     <!-- Plan -->
                     <section class="rounded-[22px] border border-hh-line bg-hh-card p-[22px]">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Plan</h3>
-                            <div class="flex items-center gap-2 rounded-[12px] bg-hh-soft p-[4px]">
-                                <button
-                                    v-for="option in (['monthly', 'annual'] as const)"
-                                    :key="option"
-                                    type="button"
-                                    class="h-[28px] rounded-[9px] px-2.5 text-[12px] font-bold transition"
-                                    :class="planCycle === option ? 'bg-hh-card text-hh-ink' : 'bg-transparent text-hh-ink3'"
-                                    @click="planCycle = option"
-                                >
-                                    {{ option === 'monthly' ? 'Monthly' : 'Annual' }}
-                                </button>
-                            </div>
-                        </div>
+                        <h3 class="text-[15px] font-extrabold tracking-[-0.01em]">Plan</h3>
 
-                        <div class="mt-3 flex flex-col gap-2">
-                            <button
-                                v-for="plan in props.house.plans"
-                                :key="plan.slug"
-                                type="button"
-                                class="flex items-center justify-between gap-2.5 rounded-2xl border-[1.5px] p-3.5 text-left transition-colors"
-                                :class="plan.current ? 'border-hh-coral bg-hh-sunk' : 'border-hh-line bg-transparent hover:bg-hh-soft'"
-                                @click="changePlan(plan.slug)"
-                            >
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-[13.5px] font-bold">{{ plan.name }}</span>
-                                        <span v-if="plan.current" class="rounded-lg bg-hh-mint px-2 py-[2px] text-[10.5px] font-bold text-[#0E1A2B]">
-                                            Current
-                                        </span>
-                                    </div>
-                                    <div class="mt-0.5 text-[12px] text-hh-ink3">{{ plan.sub }}</div>
+                        <div class="mt-3 rounded-2xl border border-hh-line bg-hh-sunk p-3.5">
+                            <template v-if="props.house.planStatus.subscribed">
+                                <div class="text-[13.5px] font-bold">Home · {{ formatPlanPrice(props.house.planStatus.price) }}/month</div>
+                                <div class="mt-0.5 text-[12px] text-hh-ink3">Cancel or update your billing details with support.</div>
+                            </template>
+                            <template v-else-if="props.house.planStatus.onTrial">
+                                <div class="text-[13.5px] font-bold">Free trial · ends {{ props.house.planStatus.trialEndsLabel }}</div>
+                                <div class="mt-0.5 text-[12px] text-hh-ink3">
+                                    Then {{ formatPlanPrice(props.house.planStatus.price) }}/month for everyone in the house.
                                 </div>
-                                <span class="flex-none text-[13.5px] font-bold text-hh-ink2">{{ formatPlanPrice(plan.price[planCycle]) }}</span>
-                            </button>
+                                <button
+                                    type="button"
+                                    class="mt-3 flex h-[38px] items-center justify-center rounded-[11px] bg-hh-coral px-4 text-[13px] font-bold text-white transition hover:-translate-y-0.5"
+                                    @click="subscribe"
+                                >
+                                    Start subscription now
+                                </button>
+                            </template>
+                            <template v-else>
+                                <div class="text-[13.5px] font-bold">Trial ended</div>
+                                <div class="mt-0.5 text-[12px] text-hh-ink3">Subscribe to keep using HouseHub.</div>
+                                <button
+                                    type="button"
+                                    class="mt-3 flex h-[38px] items-center justify-center rounded-[11px] bg-hh-coral px-4 text-[13px] font-bold text-white transition hover:-translate-y-0.5"
+                                    @click="subscribe"
+                                >
+                                    Subscribe now
+                                </button>
+                            </template>
                         </div>
                     </section>
 

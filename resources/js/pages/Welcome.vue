@@ -7,7 +7,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { House } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
-const props = defineProps<{ plans: Plan[] }>();
+const props = defineProps<{ plan: Plan }>();
 
 const page = usePage<SharedData>();
 const { appearance, updateAppearance } = useAppearance();
@@ -15,7 +15,6 @@ const { appearance, updateAppearance } = useAppearance();
 const isDark = computed(() => appearance.value === 'dark');
 const user = computed(() => page.props.auth?.user);
 
-const cycle = ref<'monthly' | 'annual'>('monthly');
 const email = ref('');
 
 const heroGradient = 'linear-gradient(118deg, var(--hh-hero1) 0%, var(--hh-hero2) 100%)';
@@ -77,11 +76,6 @@ const secondary = [
     { icon: '🏘', title: 'Multiple properties', body: 'Landlords and multi-home households, all under one login.' },
 ];
 
-const cycles = [
-    { key: 'monthly' as const, label: 'Monthly' },
-    { key: 'annual' as const, label: 'Annual · 2 months free' },
-];
-
 const promises = [
     {
         icon: '🌱',
@@ -108,14 +102,6 @@ function toggleTheme(): void {
 
 function startRegistration(): void {
     router.get(route('register'), email.value ? { email: email.value } : {});
-}
-
-function pricePeriod(plan: Plan): string {
-    if (plan.price[cycle.value] === 0) {
-        return 'forever';
-    }
-
-    return cycle.value === 'monthly' ? '/month' : '/year';
 }
 </script>
 
@@ -187,7 +173,7 @@ function pricePeriod(plan: Plan): string {
                         class="inline-flex h-[30px] items-center gap-2 rounded-[9px] bg-hh-soft px-[13px] text-xs font-bold uppercase tracking-[0.05em] text-hh-ink2"
                     >
                         <span class="h-[7px] w-[7px] animate-hh-glow rounded-full bg-hh-mint"></span>
-                        Free for the whole household
+                        First month free
                     </div>
 
                     <h1 class="mt-[22px] text-pretty text-[40px] font-black leading-[1.02] tracking-[-0.04em] sm:text-[52px] lg:text-[66px]">
@@ -219,7 +205,7 @@ function pricePeriod(plan: Plan): string {
                                 {{ face.initials }}
                             </span>
                         </div>
-                        <span class="ml-2 text-[13.5px] text-hh-ink3">Invite up to 4 people free · no card required</span>
+                        <span class="ml-2 text-[13.5px] text-hh-ink3">Unlimited household members · no card required</span>
                     </div>
                 </div>
 
@@ -394,92 +380,55 @@ function pricePeriod(plan: Plan): string {
 
             <!-- Pricing -->
             <section id="pricing" class="px-5 pb-6 pt-[76px] sm:px-8 lg:px-14">
-                <div class="mb-6 flex flex-col gap-5 sm:flex-row sm:items-end">
-                    <div>
-                        <h2 class="text-[28px] font-black tracking-[-0.03em] sm:text-[34px]">Your home, organised.</h2>
-                        <p class="mt-2.5 max-w-[560px] text-[15.5px] leading-relaxed text-hh-ink2">
-                            Keep the everyday stuff free — meals, calendar, shopping and chores. Upgrade when you want the deeper household
-                            management: money, documents, reminders, automation and more.
-                        </p>
-                    </div>
-
-                    <div class="flex items-center gap-2 self-start rounded-[14px] bg-hh-soft p-[5px] sm:ml-auto">
-                        <button
-                            v-for="option in cycles"
-                            :key="option.key"
-                            type="button"
-                            class="h-[38px] rounded-[11px] px-4 text-[13.5px] font-bold transition"
-                            :class="cycle === option.key ? 'bg-hh-card text-hh-ink' : 'bg-transparent text-hh-ink3'"
-                            @click="cycle = option.key"
-                        >
-                            {{ option.label }}
-                        </button>
-                    </div>
+                <div class="mb-6">
+                    <h2 class="text-[28px] font-black tracking-[-0.03em] sm:text-[34px]">One price, everything included</h2>
+                    <p class="mt-2.5 max-w-[560px] text-[15.5px] leading-relaxed text-hh-ink2">
+                        {{ props.plan.sub }}
+                    </p>
                 </div>
 
-                <div class="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <div
-                        v-for="plan in props.plans"
-                        :key="plan.slug"
-                        class="relative flex flex-col rounded-3xl border-[1.5px] p-7 transition hover:-translate-y-[3px] hover:shadow-hh"
-                        :class="plan.highlighted ? 'border-transparent text-hh-onhero' : 'border-hh-line bg-hh-card text-hh-ink'"
-                        :style="plan.highlighted ? { background: heroGradient } : undefined"
-                    >
-                        <div class="flex items-center gap-2.5">
-                            <span class="text-base font-extrabold tracking-tight">{{ plan.name }}</span>
-                            <span
-                                v-if="plan.tag"
-                                class="rounded-lg bg-hh-coral px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-white"
-                            >
-                                {{ plan.tag }}
-                            </span>
+                <div class="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[400px_minmax(0,1fr)]">
+                    <div class="relative flex flex-col overflow-hidden rounded-3xl p-8 text-hh-onhero" :style="{ background: heroGradient }">
+                        <div class="absolute -right-[70px] -top-20 h-[280px] w-[280px] rounded-full bg-hh-coral opacity-20 blur-[46px]"></div>
+
+                        <span
+                            class="relative self-start rounded-[9px] bg-hh-coral px-2.5 py-[5px] text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-white"
+                        >
+                            First month free
+                        </span>
+
+                        <div class="relative mt-[22px] flex items-baseline gap-2">
+                            <span class="text-[46px] font-black leading-none tracking-[-0.045em] sm:text-[58px]">{{
+                                formatPlanPrice(props.plan.price)
+                            }}</span>
+                            <span class="text-sm font-semibold text-hh-onhero2">/month</span>
                         </div>
 
-                        <div class="mt-4 flex items-baseline gap-[7px]">
-                            <span class="text-[46px] font-black tracking-[-0.04em]">{{ formatPlanPrice(plan.price[cycle]) }}</span>
-                            <span class="text-sm font-semibold" :class="plan.highlighted ? 'text-hh-onhero2' : 'text-hh-ink3'">
-                                {{ pricePeriod(plan) }}
-                            </span>
-                        </div>
-                        <div class="mt-1.5 text-[13px]" :class="plan.highlighted ? 'text-hh-onhero2' : 'text-hh-ink3'">
-                            {{ plan.sub }}
+                        <div class="relative mt-2.5 max-w-[290px] text-[14.5px] leading-relaxed text-hh-onhero2">
+                            {{ props.plan.sub }}
                         </div>
 
                         <Link
                             :href="route('register')"
-                            class="mt-[22px] flex h-[50px] items-center justify-center rounded-[14px] text-[14.5px] font-bold transition hover:-translate-y-0.5"
-                            :class="plan.highlighted ? 'bg-hh-coral text-white' : 'bg-hh-soft text-hh-ink'"
+                            class="relative mt-6 flex h-[54px] items-center justify-center rounded-[15px] bg-hh-coral text-[15.5px] font-bold text-white transition hover:-translate-y-0.5"
                         >
-                            {{ plan.cta }}
+                            {{ props.plan.cta }}
                         </Link>
 
-                        <div class="mt-6 flex flex-col gap-[11px]">
-                            <div v-for="feature in plan.features" :key="feature.text" class="flex items-start gap-2.5">
-                                <span
-                                    class="mt-0.5 grid h-[18px] w-[18px] flex-none place-items-center rounded-md text-[10px] font-extrabold text-[#0E1A2B]"
-                                    :class="feature.included ? 'bg-hh-mint' : plan.highlighted ? 'bg-hh-herofilm' : 'bg-hh-soft'"
-                                >
-                                    {{ feature.included ? '✓' : '' }}
-                                </span>
-                                <span
-                                    class="text-sm leading-snug"
-                                    :class="
-                                        feature.included
-                                            ? plan.highlighted
-                                                ? 'text-hh-onhero'
-                                                : 'text-hh-ink'
-                                            : plan.highlighted
-                                              ? 'text-hh-onhero2'
-                                              : 'text-hh-ink3'
-                                    "
-                                >
-                                    {{ feature.text }}
-                                </span>
-                            </div>
-                        </div>
+                        <div class="relative mt-auto pt-6 text-[13px] text-hh-onhero2">{{ props.plan.note }}</div>
+                    </div>
 
-                        <div class="mt-auto pt-[22px] text-[12.5px]" :class="plan.highlighted ? 'text-hh-onhero2' : 'text-hh-ink3'">
-                            {{ plan.note }}
+                    <div class="rounded-3xl border-[1.5px] border-hh-line bg-hh-card p-8">
+                        <div class="text-[12.5px] font-extrabold uppercase tracking-[0.09em] text-hh-ink3">Everything included</div>
+                        <div class="mt-5 grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-2">
+                            <div v-for="feature in props.plan.features" :key="feature" class="flex items-start gap-2.5">
+                                <span
+                                    class="mt-0.5 grid h-[18px] w-[18px] flex-none place-items-center rounded-md bg-hh-mint text-[10px] font-extrabold text-[#0E1A2B]"
+                                >
+                                    ✓
+                                </span>
+                                <span class="text-sm leading-snug text-hh-ink">{{ feature }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -523,7 +472,7 @@ function pricePeriod(plan: Plan): string {
                     >
                         Create your household
                     </button>
-                    <div class="text-center text-[12.5px] text-hh-ink3">Free forever · no card · invite up to 4 people</div>
+                    <div class="text-center text-[12.5px] text-hh-ink3">First month free · no card · unlimited members</div>
                 </form>
             </section>
 

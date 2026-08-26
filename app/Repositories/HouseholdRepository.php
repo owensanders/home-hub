@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Contracts\Repositories\HouseholdRepositoryInterface;
+use App\Enums\HouseholdRole;
 use App\Models\BudgetCategory;
 use App\Models\CalendarEvent;
 use App\Models\Household;
@@ -36,7 +37,21 @@ class HouseholdRepository implements HouseholdRepositoryInterface
     /** @return Collection<int, User> */
     public function members(Household $household): Collection
     {
-        return $household->members()->orderBy('id')->get();
+        return $household->members()->get();
+    }
+
+    /** @return Collection<int, User> */
+    public function activeMembers(Household $household): Collection
+    {
+        return $household->members()->wherePivot('pending', false)->get();
+    }
+
+    public function isSoleOwner(Household $household, User $member): bool
+    {
+        return $this->members($household)
+            ->where('pivot.role', HouseholdRole::Owner)
+            ->where('id', '!=', $member->id)
+            ->isEmpty();
     }
 
     /** @return Collection<int, CalendarEvent> */

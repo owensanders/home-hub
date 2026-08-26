@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\UseCases\House;
+
+use App\Models\Household;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
+
+class SubscribeHouseholdUseCase
+{
+    /**
+     * There is only one plan, so this only ever starts the household's
+     * subscription to it — nothing to swap between. A household that's
+     * already subscribed has nothing left to do here.
+     *
+     * @return string|null A Stripe Checkout URL to redirect to, or null when the household was already subscribed.
+     */
+    public function execute(Household $household, string $successUrl, string $cancelUrl): ?string
+    {
+        if ($household->subscribed('default')) {
+            return null;
+        }
+
+        $stripePrice = config('plans.stripe_price');
+
+        if (blank($stripePrice)) {
+            Log::error('No Stripe price configured for the Home plan.');
+
+            throw new RuntimeException('Billing is not set up yet.');
+        }
+
+        $checkout = $household->newSubscription('default', $stripePrice)->checkout([
+            'success_url' => $successUrl.(str_contains($successUrl, '?') ? '&' : '?').'plan_checkout=success',
+            'cancel_url' => $cancelUrl.(str_contains($cancelUrl, '?') ? '&' : '?').'plan_checkout=cancelled',
+        ]);
+
+        return $checkout->asStripeCheckoutSession()->url;
+    }
+}

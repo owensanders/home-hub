@@ -33,6 +33,31 @@ class CalendarTest extends TestCase
     }
 
     #[Test]
+    public function aPendingMemberDoesNotAppearInTheAttendeePickerAndCannotBeAnAttendee(): void
+    {
+        $user = User::factory()->create();
+        $pending = User::factory()->create(['household_id' => $user->household_id, 'name' => 'Margaret Parker', 'pending' => true]);
+
+        $this->actingAs($user)
+            ->get('/calendar')
+            ->assertOk()
+            ->assertInertia(function ($page) {
+                /** @var list<array<string, mixed>> $members */
+                $members = $page->toArray()['props']['calendar']['members'];
+
+                $this->assertFalse(collect($members)->contains('name', 'Margaret Parker'));
+            });
+
+        $this->actingAs($user)
+            ->post('/calendar/events', [
+                'title' => 'Football practice',
+                'starts_at' => CarbonImmutable::tomorrow()->setTime(18, 0)->format('Y-m-d\TH:i'),
+                'attendees' => [$pending->id],
+            ])
+            ->assertSessionHasErrors('attendees.0');
+    }
+
+    #[Test]
     public function itMarksTodayAndGreysTheNeighbouringMonths(): void
     {
         $user = User::factory()->create();

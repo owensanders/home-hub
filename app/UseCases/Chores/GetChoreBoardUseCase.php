@@ -38,7 +38,7 @@ class GetChoreBoardUseCase
 
         return [
             'columns' => $columns,
-            'scores' => $this->households->members($household)
+            'scores' => $this->households->activeMembers($household)
                 ->map(fn (User $member) => MemberScoreData::make(
                     member: MemberData::fromModel($member),
                     done: $chores->where('assigned_to', $member->id)->where('status', ChoreStatus::Done)->count(),

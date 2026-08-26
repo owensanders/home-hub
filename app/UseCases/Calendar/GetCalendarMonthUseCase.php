@@ -75,7 +75,7 @@ class GetCalendarMonthUseCase
             today: $today->format('Y-m'),
             weekdayLabels: $weekdayLabels,
             days: $days,
-            members: $this->households->members($household)
+            members: $this->households->activeMembers($household)
                 ->map(fn (User $member) => MemberData::fromModel($member))
                 ->values()
                 ->all(),

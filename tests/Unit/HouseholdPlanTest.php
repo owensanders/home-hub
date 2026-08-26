@@ -15,19 +15,27 @@ class HouseholdPlanTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function anUnsubscribedHouseholdIsOnTheFreePlan(): void
+    public function aHouseholdWithinItsTrialWindowIsOnTrial(): void
     {
-        $household = Household::factory()->create();
+        $household = Household::factory()->create(['trial_ends_at' => now()->addDays(10)]);
 
-        $this->assertSame('free', $household->planSlug());
+        $this->assertTrue($household->isOnTrial());
+        $this->assertFalse($household->needsToSubscribe());
     }
 
     #[Test]
-    public function anActiveSubscriptionResolvesToItsMatchingPlan(): void
+    public function aHouseholdPastItsTrialWithNoSubscriptionNeedsToSubscribe(): void
     {
-        config(['plans.home.stripe_price.monthly' => 'price_home_monthly_test']);
+        $household = Household::factory()->create(['trial_ends_at' => now()->subDay()]);
 
-        $household = Household::factory()->create();
+        $this->assertFalse($household->isOnTrial());
+        $this->assertTrue($household->needsToSubscribe());
+    }
+
+    #[Test]
+    public function aSubscribedHouseholdNeverNeedsToSubscribeEvenPastItsTrial(): void
+    {
+        $household = Household::factory()->create(['trial_ends_at' => now()->subDay()]);
         Subscription::create([
             'household_id' => $household->id,
             'type' => 'default',
@@ -36,22 +44,6 @@ class HouseholdPlanTest extends TestCase
             'stripe_price' => 'price_home_monthly_test',
         ]);
 
-        $this->assertSame('home', $household->planSlug());
-    }
-
-    #[Test]
-    public function anImmediatelyCancelledSubscriptionResolvesToFreeRightAway(): void
-    {
-        $household = Household::factory()->create();
-        Subscription::create([
-            'household_id' => $household->id,
-            'type' => 'default',
-            'stripe_id' => 'sub_test456',
-            'stripe_status' => 'active',
-            'stripe_price' => 'price_home_monthly_test',
-            'ends_at' => now()->subMinute(),
-        ]);
-
-        $this->assertSame('free', $household->planSlug());
+        $this->assertFalse($household->needsToSubscribe());
     }
 }

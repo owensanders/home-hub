@@ -2,7 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Enums\HouseholdRole;
+use App\Enums\Palette;
+use App\Models\Household;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -24,18 +29,52 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'household_id' => \App\Models\Household::factory(),
             'name' => fake()->name(),
             'initials' => fake()->unique()->lexify('??'),
-            'colour' => fake()->randomElement(\App\Enums\Palette::cases()),
+            'colour' => fake()->randomElement(Palette::cases()),
             'status_line' => fake()->sentence(3),
-            'role' => \App\Enums\HouseholdRole::Adult,
-            'pending' => false,
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
+    }
+
+    /**
+     * `household_id`/`role`/`pending`/`pending_reason` aren't real User columns
+     * any more — they describe the membership row to attach after creation, so
+     * every existing `User::factory()->create(['household_id' => ..., 'role' => ...])`
+     * call across the test suite keeps working unchanged.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function create($attributes = [], ?Model $parent = null)
+    {
+        if ($this->count !== null && $this->count !== 1) {
+            return parent::create($attributes, $parent);
+        }
+
+        $membershipKeys = ['household_id', 'role', 'pending', 'pending_reason'];
+        $membership = collect($attributes)->only($membershipKeys);
+        $attributes = collect($attributes)->except($membershipKeys)->all();
+
+        /** @var User $user */
+        $user = parent::create($attributes, $parent);
+
+        $householdId = $membership->has('household_id')
+            ? $membership->get('household_id')
+            : Household::factory()->create()->id;
+
+        if ($householdId !== null) {
+            $user->households()->attach($householdId, [
+                'role' => $membership->get('role', HouseholdRole::Adult),
+                'pending' => $membership->get('pending', false),
+                'pending_reason' => $membership->get('pending_reason'),
+            ]);
+            $user->forceFill(['current_household_id' => $householdId])->save();
+        }
+
+        return $user;
     }
 
     /**
