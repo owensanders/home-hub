@@ -1,3 +1,4 @@
+import type { AiMealSuggestion } from '@/types/househub';
 import type { LucideIcon } from 'lucide-vue-next';
 
 export interface Auth {
@@ -20,7 +21,7 @@ export interface SharedData {
     name: string;
     auth: Auth;
     household: { id: number; name: string } | null;
-    flash: { toast: string | null };
+    flash: { toast: string | null; aiMeals: AiMealSuggestion[] | null };
     // Inertia's PageProps requires an index signature to be used with usePage<T>().
     [key: string]: unknown;
     ziggy: {

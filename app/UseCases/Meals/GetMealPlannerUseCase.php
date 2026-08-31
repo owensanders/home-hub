@@ -31,6 +31,8 @@ class GetMealPlannerUseCase
      *     recipeCount: int,
      *     recipes: list<RecipeData>,
      *     members: list<MemberData>,
+     *     aiConfigured: bool,
+     *     aiAvailableFrom: ?string,
      * }
      */
     public function execute(Household $household, CarbonImmutable $anyDayInWeek): array
@@ -73,6 +75,10 @@ class GetMealPlannerUseCase
                 ->map(MemberData::fromModel(...))
                 ->values()
                 ->all(),
+            'aiConfigured' => filled(config('ai.providers.openai.key')),
+            'aiAvailableFrom' => $household->canGenerateAiMealPlan()
+                ? null
+                : $household->ai_meal_plan_generated_at->addWeek()->toDateString(),
         ];
     }
 }

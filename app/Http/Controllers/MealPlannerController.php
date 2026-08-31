@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\RecipeTag;
+use App\Http\Requests\GenerateAiMealPlanRequest;
 use App\Http\Requests\IndexMealPlannerRequest;
 use App\Http\Requests\PlannedMealRequest;
 use App\Http\Requests\RescheduleMealRequest;
@@ -12,6 +13,7 @@ use App\Models\PlannedMeal;
 use App\Traits\ResolvesHouseholdTrait;
 use App\UseCases\Meals\AddPlannedMealUseCase;
 use App\UseCases\Meals\DeletePlannedMealUseCase;
+use App\UseCases\Meals\GenerateAiMealPlanUseCase;
 use App\UseCases\Meals\GetMealPlannerUseCase;
 use App\UseCases\Meals\RescheduleMealUseCase;
 use App\UseCases\Meals\UpdatePlannedMealUseCase;
@@ -21,6 +23,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 
 class MealPlannerController extends Controller
 {
@@ -80,6 +83,24 @@ class MealPlannerController extends Controller
         $moved = $rescheduleMeal->execute($meal, CarbonImmutable::parse($request->validated('planned_on')));
 
         return back()->with('toast', "{$moved->name} moved");
+    }
+
+    public function generateAiPlan(GenerateAiMealPlanRequest $request, GenerateAiMealPlanUseCase $generate): RedirectResponse|Response
+    {
+        try {
+            $meals = $generate->execute(
+                $this->household($request),
+                (int) $request->validated('people'),
+                $request->validated('budget') !== null ? (float) $request->validated('budget') : null,
+                $request->validated('diets', []),
+                (string) $request->validated('avoid', ''),
+                $request->validated('goals', []),
+            );
+        } catch (RuntimeException $e) {
+            return back()->withErrors(['ai' => $e->getMessage()]);
+        }
+
+        return back()->with('aiMeals', $meals);
     }
 
     private function assertOwned(Request $request, PlannedMeal $meal): void

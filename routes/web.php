@@ -61,6 +61,7 @@ Route::middleware(['auth', 'verified', 'household'])->group(function (): void {
         // Everything else that creates, edits, or deletes household data —
         // Owner/Adult only. Teen and Child get 403s.
         Route::middleware('role:owner,adult')->group(function (): void {
+            Route::post('meals/ai-plan', [MealPlannerController::class, 'generateAiPlan'])->name('meals.aiPlan');
             Route::post('meals', [MealPlannerController::class, 'store'])->name('meals.store');
             Route::patch('meals/{meal}', [MealPlannerController::class, 'update'])->name('meals.update');
             Route::delete('meals/{meal}', [MealPlannerController::class, 'destroy'])->name('meals.destroy');

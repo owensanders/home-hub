@@ -107,6 +107,15 @@ export interface Recipe {
     isFavourite: boolean;
 }
 
+export interface AiMealSuggestion {
+    name: string;
+    description: string;
+    duration_label: string;
+    difficulty: string;
+    tags: string[];
+    ingredients: RecipeIngredient[];
+}
+
 export interface TagOption {
     value: string;
     label: string;

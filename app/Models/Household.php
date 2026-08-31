@@ -21,6 +21,7 @@ use Laravel\Cashier\Billable;
  * @property int $streak_days
  * @property \Illuminate\Support\Carbon|null $streak_last_active_date
  * @property \Illuminate\Support\Carbon|null $trial_ends_at
+ * @property \Illuminate\Support\Carbon|null $ai_meal_plan_generated_at
  * @property-read HouseholdUser|null $pivot Present when loaded through a `User::households()` query.
  */
 class Household extends Model
@@ -31,7 +32,7 @@ class Household extends Model
     use HasFactory;
 
     /** @var list<string> */
-    protected $fillable = ['name', 'join_code', 'join_code_enabled', 'location', 'streak_days', 'streak_last_active_date', 'trial_ends_at'];
+    protected $fillable = ['name', 'join_code', 'join_code_enabled', 'location', 'streak_days', 'streak_last_active_date', 'trial_ends_at', 'ai_meal_plan_generated_at'];
 
     protected function casts(): array
     {
@@ -40,6 +41,7 @@ class Household extends Model
             'streak_last_active_date' => 'date',
             'join_code_enabled' => 'boolean',
             'trial_ends_at' => 'datetime',
+            'ai_meal_plan_generated_at' => 'datetime',
         ];
     }
 
@@ -141,5 +143,12 @@ class Household extends Model
     {
         return ! $this->subscribed('default')
             && ($this->trial_ends_at === null || $this->trial_ends_at->isPast());
+    }
+
+    /** True if the household hasn't generated an AI meal plan in the last week. */
+    public function canGenerateAiMealPlan(): bool
+    {
+        return $this->ai_meal_plan_generated_at === null
+            || $this->ai_meal_plan_generated_at->lt(now()->subWeek());
     }
 }

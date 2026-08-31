@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import AiMealPlanDialog from '@/components/househub/AiMealPlanDialog.vue';
 import RecipeDetailFields from '@/components/househub/RecipeDetailFields.vue';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useHouseholdRole } from '@/composables/useHouseholdRole';
@@ -7,7 +8,7 @@ import HouseHubLayout from '@/layouts/HouseHubLayout.vue';
 import { tint } from '@/lib/househub';
 import type { Member, PlannedMeal, PlannerDay, Recipe, ShoppingList, TagOption } from '@/types/househub';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { Plus } from 'lucide-vue-next';
+import { Plus, Sparkles } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
@@ -19,7 +20,11 @@ const props = defineProps<{
     members: Member[];
     shoppingLists: ShoppingList[];
     tagOptions: TagOption[];
+    aiConfigured: boolean;
+    aiAvailableFrom: string | null;
 }>();
+
+const aiOpen = ref(false);
 
 const SLOTS = ['breakfast', 'lunch', 'dinner'];
 
@@ -40,7 +45,7 @@ const form = useForm({
     new_recipe_tags: [] as string[],
     new_recipe_ingredients: [] as { name: string; quantity: string }[],
     new_recipe_tint: 0,
-    new_recipe_is_favourite: false,
+    new_recipe_is_favourite: false as boolean,
     new_recipe_shopping_list_id: null as number | null,
     planned_on: '',
     slot: 'dinner',
@@ -220,7 +225,13 @@ function drop(date: string): void {
 <template>
     <HouseHubLayout title="Meal Planner" :subtitle="`Week of ${weekOf}`">
         <div class="flex animate-hh-rise flex-col gap-4">
-            <div v-if="canManage" class="text-[13px] text-hh-ink3">Drag any meal card onto another day to reschedule, or click one to edit it.</div>
+            <div v-if="canManage" class="flex items-center gap-3">
+                <div class="text-[13px] text-hh-ink3">Drag any meal card onto another day to reschedule, or click one to edit it.</div>
+                <button type="button" class="hh-btn ml-auto w-auto bg-hh-ink text-hh-shell" @click="aiOpen = true">
+                    <Sparkles class="mr-1.5 inline h-3.5 w-3.5" :stroke-width="2.5" />
+                    Plan my week
+                </button>
+            </div>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                 <div
@@ -411,11 +422,15 @@ function drop(date: string): void {
             </DialogContent>
         </Dialog>
 
-        <ConfirmDialog
-            :open="confirmOpen"
-            message="Remove this meal from the plan?"
-            @update:open="confirmOpen = $event"
-            @confirm="confirmDestroy"
+        <ConfirmDialog :open="confirmOpen" message="Remove this meal from the plan?" @update:open="confirmOpen = $event" @confirm="confirmDestroy" />
+
+        <AiMealPlanDialog
+            :open="aiOpen"
+            :ai-configured="aiConfigured"
+            :ai-available-from="aiAvailableFrom"
+            :days="days"
+            :shopping-lists="shoppingLists"
+            @update:open="aiOpen = $event"
         />
     </HouseHubLayout>
 </template>

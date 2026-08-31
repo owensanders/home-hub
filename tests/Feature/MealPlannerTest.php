@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Ai\Agents\MealPlanAgent;
+use App\Models\Household;
 use App\Models\PlannedMeal;
 use App\Models\Recipe;
 use App\Models\ShoppingList;
@@ -367,5 +369,57 @@ class MealPlannerTest extends TestCase
             ->assertNotFound();
 
         $this->assertDatabaseHas('planned_meals', ['id' => $meal->id]);
+    }
+
+    #[Test]
+    public function itGeneratesAnAiMealPlanWhenConfigured(): void
+    {
+        config(['ai.providers.openai.key' => 'test-key']);
+        MealPlanAgent::fake([
+            [
+                'meals' => [[
+                    'name' => 'Lemon chicken traybake',
+                    'description' => 'A simple one-tray dinner.',
+                    'duration_label' => '45 min',
+                    'difficulty' => 'Easy',
+                    'tags' => ['Quick'],
+                    'ingredients' => [['name' => 'Chicken thighs', 'quantity' => '500g']],
+                ]],
+            ],
+        ]);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/meals/ai-plan', ['people' => 4, 'budget' => 85, 'diets' => [], 'avoid' => '', 'goals' => []])
+            ->assertRedirect()
+            ->assertSessionHas('aiMeals', fn ($meals) => $meals[0]['name'] === 'Lemon chicken traybake');
+
+        $this->assertNotNull($user->household->refresh()->ai_meal_plan_generated_at);
+    }
+
+    #[Test]
+    public function itRefusesToGenerateWhenAiIsNotConfigured(): void
+    {
+        config(['ai.providers.openai.key' => null]);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/meals/ai-plan', ['people' => 4, 'budget' => null, 'diets' => [], 'avoid' => '', 'goals' => []])
+            ->assertSessionHasErrors('ai');
+
+        $this->assertNull($user->household->refresh()->ai_meal_plan_generated_at);
+    }
+
+    #[Test]
+    public function itRefusesASecondGenerationWithinAWeek(): void
+    {
+        config(['ai.providers.openai.key' => 'test-key']);
+        MealPlanAgent::fake();
+        $user = User::factory()->create();
+        Household::where('id', $user->household_id)->update(['ai_meal_plan_generated_at' => now()->subDays(2)]);
+
+        $this->actingAs($user)
+            ->post('/meals/ai-plan', ['people' => 4, 'budget' => null, 'diets' => [], 'avoid' => '', 'goals' => []])
+            ->assertSessionHasErrors('ai');
     }
 }

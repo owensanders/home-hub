@@ -137,6 +137,28 @@ class RecipeTest extends TestCase
     }
 
     #[Test]
+    public function itSkipsIngredientsAlreadyOnTheList(): void
+    {
+        $user = User::factory()->create();
+        $recipe = Recipe::factory()->create([
+            'household_id' => $user->household_id,
+            'ingredients' => [
+                ['name' => 'Lemon', 'quantity' => '1'],
+                ['name' => 'Chicken breast', 'quantity' => '500g'],
+            ],
+        ]);
+        $list = ShoppingList::factory()->create(['household_id' => $user->household_id]);
+        $list->items()->create(['name' => 'lemon', 'quantity' => '2', 'position' => 0]);
+
+        $this->actingAs($user)
+            ->post("/recipes/{$recipe->id}/add-to-shopping-list", ['shopping_list_id' => $list->id])
+            ->assertRedirect();
+
+        $this->assertSame(1, $list->items()->where('name', 'lemon')->count());
+        $this->assertDatabaseHas('shopping_items', ['shopping_list_id' => $list->id, 'name' => 'Chicken breast']);
+    }
+
+    #[Test]
     public function itAddsIngredientsToAListWhenCreatingARecipe(): void
     {
         $user = User::factory()->create();
