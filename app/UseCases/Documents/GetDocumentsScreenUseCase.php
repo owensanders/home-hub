@@ -41,13 +41,21 @@ class GetDocumentsScreenUseCase
                 ->all(),
             'active' => $active !== null ? DocumentFolderData::fromModel($active, $activeDocuments->count()) : null,
             'documents' => $activeDocuments->map(DocumentData::fromModel(...))->all(),
-            'storageLabel' => $this->formatGb($totalBytes).' of '.$this->formatGb($quotaBytes),
+            'storageLabel' => $this->formatBytes($totalBytes).' of '.$this->formatBytes($quotaBytes),
             'storagePct' => $quotaBytes > 0 ? max(2, (int) round($totalBytes / $quotaBytes * 100)) : 0,
         ];
     }
 
-    private function formatGb(int $bytes): string
+    private function formatBytes(int $bytes): string
     {
-        return number_format($bytes / 1024 / 1024 / 1024, 1).' GB';
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $value = max($bytes, 0);
+        $i = 0;
+        while ($value >= 1024 && $i < count($units) - 1) {
+            $value /= 1024;
+            $i++;
+        }
+
+        return number_format($value, $i === 0 ? 0 : 1).' '.$units[$i];
     }
 }

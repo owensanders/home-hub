@@ -152,6 +152,23 @@ class DocumentTest extends TestCase
     }
 
     #[Test]
+    public function itShowsTheStorageMeterInSmallerUnitsForSmallUploads(): void
+    {
+        $user = User::factory()->create(['role' => HouseholdRole::Owner]);
+        $folder = DocumentFolder::create(['household_id' => $user->household_id, 'name' => 'Property']);
+        $folder->documents()->create([
+            'household_id' => $user->household_id,
+            'name' => 'A.pdf', 'path' => 'a.pdf', 'extension' => 'pdf', 'size' => 900 * 1024,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/documents')
+            ->assertInertia(fn ($page) => $page
+                ->where('storageLabel', '900.0 KB of 20.0 GB')
+            );
+    }
+
+    #[Test]
     public function teenAndChildRolesAreForbiddenFromEveryDocumentsRoute(): void
     {
         $teen = User::factory()->create(['role' => HouseholdRole::Teen]);
