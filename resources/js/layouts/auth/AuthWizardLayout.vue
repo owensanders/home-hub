@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { useAppearance } from '@/composables/useAppearance';
 import { Link } from '@inertiajs/vue3';
-import { House, Moon, Sun } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { House } from 'lucide-vue-next';
 
 const props = defineProps<{
     step: 1 | 2 | 3;
@@ -14,15 +12,6 @@ const steps = [
     { title: 'Your household', body: 'Create a new one, or join with an invite code.' },
     { title: 'First morning', body: 'We drop you straight into the dashboard.' },
 ];
-
-const { appearance, updateAppearance } = useAppearance();
-const isDark = computed(
-    () => appearance.value === 'dark' || (appearance.value === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches),
-);
-
-function toggleTheme() {
-    updateAppearance(isDark.value ? 'light' : 'dark');
-}
 </script>
 
 <template>
@@ -77,15 +66,6 @@ function toggleTheme() {
                     <span class="font-mono text-xs text-hh-ink3">Step {{ props.step }} of 3</span>
                     <span class="text-sm font-bold">{{ props.stepTitle }}</span>
                     <div class="flex-1"></div>
-                    <button
-                        type="button"
-                        title="Toggle theme"
-                        class="grid h-9 w-9 flex-none place-items-center rounded-xl bg-hh-soft transition-colors hover:bg-hh-line"
-                        @click="toggleTheme"
-                    >
-                        <Sun v-if="isDark" class="h-4 w-4" />
-                        <Moon v-else class="h-4 w-4" />
-                    </button>
                     <template v-if="props.step === 1">
                         <span class="hidden text-[13px] text-hh-ink3 sm:inline">Already registered?</span>
                         <Link :href="route('login')" class="text-[13.5px] font-semibold text-hh-coral hover:opacity-75">Log in</Link>
